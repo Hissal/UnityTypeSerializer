@@ -1,0 +1,14 @@
+{
+    "name": "Hissal.TypeSerializer",
+    "rootNamespace": "Hissal.TypeSerializer",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
