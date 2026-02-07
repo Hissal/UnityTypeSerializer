@@ -553,11 +553,35 @@ namespace Editor {
                         allConcrete = false;
                     }
                     else {
-                        processedArgs[i] = typeArgs[i];
-                        
-                        // Check if this argument contains any generic parameters
-                        if (processedArgs[i]!.ContainsGenericParameters) {
-                            allConcrete = false;
+                        // If this argument is an open generic type definition, recursively construct it first
+                        if (typeArgs[i]!.IsGenericTypeDefinition && constructionState != null) {
+                            // Check if there's nested construction state for this argument
+                            var nestedPath = new List<int> { i };
+                            var nestedArgs = constructionState.GetArguments(nestedPath);
+                            
+                            if (nestedArgs != null && nestedArgs.All(a => a != null)) {
+                                // Recursively construct the nested type
+                                var constructedNested = ConstructNestedTypeRecursively(typeArgs[i]!, nestedPath);
+                                processedArgs[i] = constructedNested;
+                                
+                                // Check if the constructed type still contains generic parameters
+                                if (constructedNested.ContainsGenericParameters) {
+                                    allConcrete = false;
+                                }
+                            }
+                            else {
+                                // Nested arguments not fully selected, keep as open generic
+                                processedArgs[i] = typeArgs[i];
+                                allConcrete = false;
+                            }
+                        }
+                        else {
+                            processedArgs[i] = typeArgs[i];
+                            
+                            // Check if this argument contains any generic parameters
+                            if (processedArgs[i]!.ContainsGenericParameters) {
+                                allConcrete = false;
+                            }
                         }
                     }
                 }
@@ -583,6 +607,50 @@ namespace Editor {
             catch (Exception ex) {
                 Debug.LogError($"Failed to construct generic type: {ex.Message}\nStack: {ex.StackTrace}");
             }
+        }
+
+        /// <summary>
+        /// Recursively constructs a nested generic type using the construction state.
+        /// </summary>
+        /// <param name="openGenericType">The open generic type to construct</param>
+        /// <param name="path">The path to this type in the construction state tree</param>
+        /// <returns>The constructed type</returns>
+        private Type ConstructNestedTypeRecursively(Type openGenericType, List<int> path) {
+            if (!openGenericType.IsGenericTypeDefinition) {
+                return openGenericType;
+            }
+            
+            var nestedArgs = constructionState!.GetArguments(path);
+            if (nestedArgs == null) {
+                throw new InvalidOperationException($"No construction state found for type '{openGenericType.Name}' at path {string.Join("/", path)}");
+            }
+            
+            var processedNestedArgs = new Type[nestedArgs.Length];
+            
+            for (int i = 0; i < nestedArgs.Length; i++) {
+                if (nestedArgs[i] == null) {
+                    throw new InvalidOperationException($"Argument {i} for type '{openGenericType.Name}' at path {string.Join("/", path)} is null (expected {nestedArgs.Length} arguments)");
+                }
+                
+                // If this nested argument is also an open generic, recursively construct it
+                if (nestedArgs[i]!.IsGenericTypeDefinition) {
+                    var childPath = new List<int>(path) { i };
+                    var childArgs = constructionState.GetArguments(childPath);
+                    
+                    if (childArgs != null && childArgs.All(a => a != null)) {
+                        processedNestedArgs[i] = ConstructNestedTypeRecursively(nestedArgs[i]!, childPath);
+                    }
+                    else {
+                        // Keep as open generic if nested args not available
+                        processedNestedArgs[i] = nestedArgs[i]!;
+                    }
+                }
+                else {
+                    processedNestedArgs[i] = nestedArgs[i]!;
+                }
+            }
+            
+            return openGenericType.MakeGenericType(processedNestedArgs);
         }
 
         
