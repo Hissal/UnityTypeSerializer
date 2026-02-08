@@ -1,7 +1,7 @@
-﻿# Deep Nesting Feature for TypeRef
+﻿# Deep Nesting Feature for SerializedType
 
 ## Overview
-The TypeRef drawer now supports **infinite recursive nesting** of generic types, allowing you to construct extremely complex nested structures like:
+The SerializedType drawer now supports **infinite recursive nesting** of generic types, allowing you to construct extremely complex nested structures like:
 
 ```
 MegaWrapper<
@@ -50,7 +50,7 @@ The UI shows the nesting depth with visual indicators:
 
 1. **Select an open generic at top level**
    ```
-   TypeRef Field: [Dropdown ▼] → Select "MegaWrapper<T1, T2, T3>"
+   SerializedType Field: [Dropdown ▼] → Select "MegaWrapper<T1, T2, T3>"
    ```
 
 2. **UI shows construction interface**
@@ -268,8 +268,8 @@ Potential improvements:
 
 ## Related Files
 
-- `TypeRefDrawer.cs` - Main implementation
-- `TypeRef.cs` - The type reference wrapper
-- `TypeRefOptionsAttribute.cs` - Configuration attribute
-- `TypeRefExample.cs` - Test cases and examples
+- `SerializedTypeDrawer.cs` - Main implementation
+- `SerializedType.cs` - The type reference wrapper
+- `SerializedTypeOptionsAttribute.cs` - Configuration attribute
+- `SerializedTypeExample.cs` - Test cases and examples
 - `BUG_FIX_NESTED_MULTI_PARAMS.md` - Bug fix documentation

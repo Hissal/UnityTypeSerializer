@@ -1,7 +1,7 @@
-﻿# TypeRef Infinite Nesting - Implementation Summary
+﻿# SerializedType Infinite Nesting - Implementation Summary
 
 ## Overview
-The TypeRef drawer has been completely rewritten to support **truly infinite recursive nesting** of generic types. The previous implementation had hard-coded methods for each nesting level (limiting it to 3 levels). The new implementation uses a single recursive method with path-based state management, supporting unlimited depth.
+The SerializedType drawer has been completely rewritten to support **truly infinite recursive nesting** of generic types. The previous implementation had hard-coded methods for each nesting level (limiting it to 3 levels). The new implementation uses a single recursive method with path-based state management, supporting unlimited depth.
 
 ## What Was Fixed
 
@@ -61,7 +61,7 @@ path = [0, 2, 1]    → Root arg 0, nested arg 2, nested arg 1's nested type
 
 ## New Test Types Added
 
-The `TypeRefExample.cs` file now includes extensive test cases:
+The `SerializedTypeExample.cs` file now includes extensive test cases:
 
 ### Generic Elements with Generic Parameters
 ```csharp
@@ -148,7 +148,7 @@ MegaWrapper5<
 ## How to Test
 
 1. **Open Unity Editor**
-2. **Find TypeRefExample component** (or create a GameObject with this script)
+2. **Find SerializedTypeExample component** (or create a GameObject with this script)
 3. **Try the test fields**:
    - Start with simple cases: `extremeNesting` field
    - Select `MegaWrapper5<T1, T2, T3, T4, T5>`
@@ -235,13 +235,13 @@ Potential improvements for even better UX:
 
 ## Files Modified
 
-1. **TypeRefDrawer.cs**
+1. **SerializedTypeDrawer.cs**
    - Completely rewritten with recursive approach
    - Added `GenericConstructionState` class
    - Single `DrawGenericConstructorRecursive` method handles all levels
    - Improved `GetTypeName` for nested generics
 
-2. **TypeRefExample.cs**
+2. **SerializedTypeExample.cs**
    - Added 50+ new test types
    - Generic elements with generic parameters
    - Multiple MegaWrapper variants
@@ -256,7 +256,7 @@ Potential improvements for even better UX:
 
 ## Conclusion
 
-The TypeRef drawer now supports **truly infinite generic nesting** through:
+The SerializedType drawer now supports **truly infinite generic nesting** through:
 - Path-based state management
 - Single recursive drawing method
 - Proper constraint validation at all levels

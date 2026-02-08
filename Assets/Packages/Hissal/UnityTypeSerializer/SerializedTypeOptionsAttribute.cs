@@ -2,11 +2,11 @@
 
 namespace Hissal.UnityTypeSerializer {
     /// <summary>
-    /// Configures filtering options for a <see cref="TypeRef{TBase}"/> field.
+    /// Configures filtering options for a <see cref="SerializedType{TBase}"/> field.
     /// Controls which types appear in the dropdown and how generic types are handled.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-    public sealed class TypeRefOptionsAttribute : Attribute {
+    public sealed class SerializedTypeOptionsAttribute : Attribute {
         /// <summary>
         /// Gets whether to use the complex step-by-step constructor UI for generic types.
         /// When false (default), uses the inline one-line drawer mode with multiple dropdowns.
@@ -64,7 +64,7 @@ namespace Hissal.UnityTypeSerializer {
         public string? IncludeTypesResolver { get; init; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TypeRefOptionsAttribute"/> class.
+        /// Initializes a new instance of the <see cref="SerializedTypeOptionsAttribute"/> class.
         /// </summary>
         /// <param name="allowGenericTypeConstruction">
         /// If true, enables the UI for constructing closed generic types from open definitions (e.g., <c>List&lt;&gt;</c> → <c>List&lt;int&gt;</c>).
@@ -85,7 +85,7 @@ namespace Hissal.UnityTypeSerializer {
         /// If false (default), uses the inline one-line drawer mode with multiple dropdowns.
         /// Default is false.
         /// </param>
-        public TypeRefOptionsAttribute(
+        public SerializedTypeOptionsAttribute(
             bool allowGenericTypeConstruction = false,
             bool allowSelfNesting = false,
             bool allowOpenGenerics = false,

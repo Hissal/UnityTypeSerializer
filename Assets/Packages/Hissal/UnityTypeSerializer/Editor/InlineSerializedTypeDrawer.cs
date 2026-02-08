@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
-    /// Inline drawer for TypeRef that displays everything on a single line with multiple dropdowns.
-    /// This is the default, simpler mode for TypeRef fields.
+    /// Inline drawer for SerializedType that displays everything on a single line with multiple dropdowns.
+    /// This is the default, simpler mode for SerializedType fields.
     /// </summary>
-    internal sealed class InlineTypeRefDrawer<TBase> : TypeRefDrawerBase<TBase>, ITypeRefDrawerImplementation 
+    internal sealed class InlineSerializedTypeDrawer<TBase> : SerializedTypeDrawerBase<TBase>, ISerializedTypeDrawerImplementation 
         where TBase : class {
         
         // UI Layout Constants
@@ -32,10 +32,10 @@ namespace Hissal.UnityTypeSerializer.Editor {
         GUIStyle? labelStyle;
         GUIStyle? literalStyle;
         
-        public InlineTypeRefDrawer(
+        public InlineSerializedTypeDrawer(
             InspectorProperty property,
-            PropertyValueEntry<TypeRef<TBase>> valueEntry,
-            TypeRefOptionsAttribute? options,
+            PropertyValueEntry<SerializedType<TBase>> valueEntry,
+            SerializedTypeOptionsAttribute? options,
             List<Type> availableTypes) 
             : base(property, valueEntry, options, availableTypes) {
             
@@ -569,7 +569,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
         
         /// <summary>
-        /// Safe wrapper for updating the TypeRef value.
+        /// Safe wrapper for updating the SerializedType value.
         /// Guards against re-entrant updates that cause collection modification errors.
         /// </summary>
         void UpdateValue(Type? newType) {
@@ -577,7 +577,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             
             try {
                 isUpdating = true;
-                ValueEntry.SmartValue = new TypeRef<TBase> { Type = newType };
+                ValueEntry.SmartValue = new SerializedType<TBase> { Type = newType };
                 ValueEntry.ApplyChanges();
             } finally {
                 isUpdating = false;

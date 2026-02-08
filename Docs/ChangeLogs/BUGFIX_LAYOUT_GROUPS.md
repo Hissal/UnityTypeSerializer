@@ -1,4 +1,4 @@
-﻿# TypeRefDrawer Layout Group Bugfix
+﻿# SerializedTypeDrawer Layout Group Bugfix
 
 ## Issues Fixed
 
@@ -31,7 +31,7 @@ This makes the nested constructor UI more compact and easier to read.
 
 ## Changes Made
 
-**File**: `TypeRefDrawer.cs`
+**File**: `SerializedTypeDrawer.cs`
 
 **Modified Lines**:
 - **Line 217**: Removed unused `hasDrawnNestedConstructor` variable declaration

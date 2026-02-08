@@ -1,8 +1,8 @@
-﻿# TypeRef - Nested Generic Type Construction
+﻿# SerializedType - Nested Generic Type Construction
 
 ## Overview
 
-The TypeRef drawer now supports **nested generic type construction**, allowing you to select open generic types as type arguments and then construct them recursively.
+The SerializedType drawer now supports **nested generic type construction**, allowing you to select open generic types as type arguments and then construct them recursively.
 
 ## How It Works
 

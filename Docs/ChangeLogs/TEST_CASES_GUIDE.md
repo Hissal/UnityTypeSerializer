@@ -1,7 +1,7 @@
-﻿# TypeRef Test Cases Guide
+﻿# SerializedType Test Cases Guide
 
 ## Overview
-The `TypeRefExample.cs` provides 11 comprehensive test cases covering everything from basic type selection to extreme 4-level nested generic construction.
+The `SerializedTypeExample.cs` provides 11 comprehensive test cases covering everything from basic type selection to extreme 4-level nested generic construction.
 
 ---
 

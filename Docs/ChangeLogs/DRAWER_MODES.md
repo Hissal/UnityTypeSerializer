@@ -1,8 +1,8 @@
-# TypeRef Drawer Modes
+# SerializedType Drawer Modes
 
 ## Overview
 
-TypeRef now supports two drawer modes:
+SerializedType now supports two drawer modes:
 1. **Inline Mode** (default) - Simple, single-line UI with multiple dropdowns
 2. **Complex Constructor Mode** (opt-in) - Detailed step-by-step nested constructor UI
 
@@ -23,12 +23,12 @@ The inline mode displays the entire type on a single line with multiple dropdown
 
 ### Usage
 
-Inline mode is the **default**. Simply use TypeRef without any special configuration:
+Inline mode is the **default**. Simply use SerializedType without any special configuration:
 
 ```csharp
 [SerializeField]
-[TypeRefOptions(allowGenericTypeConstruction: true)]
-TypeRef<IMyInterface> myType;
+[SerializedTypeOptions(allowGenericTypeConstruction: true)]
+SerializedType<IMyInterface> myType;
 ```
 
 ### Inline Mode with Options
@@ -36,21 +36,21 @@ TypeRef<IMyInterface> myType;
 ```csharp
 // Allow generic construction (inline)
 [SerializeField]
-[TypeRefOptions(allowGenericTypeConstruction: true)]
-TypeRef<IContainer> container;
+[SerializedTypeOptions(allowGenericTypeConstruction: true)]
+SerializedType<IContainer> container;
 
 // Allow open generics (inline)
 [SerializeField]
-[TypeRefOptions(allowOpenGenerics: true)]
-TypeRef<IContainer> container;
+[SerializedTypeOptions(allowOpenGenerics: true)]
+SerializedType<IContainer> container;
 
 // Both options (inline)
 [SerializeField]
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     allowOpenGenerics: true
 )]
-TypeRef<IContainer> container;
+SerializedType<IContainer> container;
 ```
 
 ### Visual Example
@@ -83,11 +83,11 @@ Enable complex constructor mode by setting `useComplexConstructor: true`:
 
 ```csharp
 [SerializeField]
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     useComplexConstructor: true
 )]
-TypeRef<IContainer> container;
+SerializedType<IContainer> container;
 ```
 
 ### Complex Constructor with Options
@@ -95,13 +95,13 @@ TypeRef<IContainer> container;
 ```csharp
 // Complex constructor with all options
 [SerializeField]
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     allowOpenGenerics: true,
     allowSelfNesting: true,
     useComplexConstructor: true
 )]
-TypeRef<IContainer> container;
+SerializedType<IContainer> container;
 ```
 
 ### Visual Example
@@ -143,7 +143,7 @@ For `Container<ElementalDamage<FireElement>>`, complex constructor shows:
 
 ## Option Compatibility
 
-Both drawer modes respect all TypeRefOptions:
+Both drawer modes respect all SerializedTypeOptions:
 
 | Option | Inline Mode | Complex Mode |
 |--------|-------------|--------------|
@@ -165,8 +165,8 @@ Both modes provide clear error messages when the selected type violates the rule
 
 ```csharp
 [SerializeField]
-[TypeRefOptions(allowGenericTypeConstruction: true)]  // But NOT allowOpenGenerics
-TypeRef<IContainer> container;
+[SerializedTypeOptions(allowGenericTypeConstruction: true)]  // But NOT allowOpenGenerics
+SerializedType<IContainer> container;
 ```
 
 If you try to leave the type as `Container<T>` (open generic):
@@ -187,11 +187,11 @@ If you try to leave the type as `Container<T>` (open generic):
 
 ## Migration Guide
 
-If you're using the old TypeRef implementation:
+If you're using the old SerializedType implementation:
 
 ### No Changes Needed
 - Inline mode is the new default
-- All existing TypeRef fields will automatically use inline mode
+- All existing SerializedType fields will automatically use inline mode
 - No code changes required
 
 ### To Keep Old Behavior
@@ -199,10 +199,10 @@ If you prefer the complex constructor UI:
 
 ```csharp
 // Change from this:
-[TypeRefOptions(allowGenericTypeConstruction: true)]
+[SerializedTypeOptions(allowGenericTypeConstruction: true)]
 
 // To this:
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     useComplexConstructor: true
 )]
@@ -216,8 +216,8 @@ If you prefer the complex constructor UI:
 
 ```csharp
 [SerializeField]
-[TypeRefOptions(allowGenericTypeConstruction: true)]
-TypeRef<IDamageEffect> damage;
+[SerializedTypeOptions(allowGenericTypeConstruction: true)]
+SerializedType<IDamageEffect> damage;
 ```
 
 **Workflow:**
@@ -229,8 +229,8 @@ TypeRef<IDamageEffect> damage;
 
 ```csharp
 [SerializeField]
-[TypeRefOptions(allowGenericTypeConstruction: true)]
-TypeRef<IDamageEffect> damage;
+[SerializedTypeOptions(allowGenericTypeConstruction: true)]
+SerializedType<IDamageEffect> damage;
 ```
 
 **Workflow:**
@@ -243,11 +243,11 @@ TypeRef<IDamageEffect> damage;
 
 ```csharp
 [SerializeField]
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     useComplexConstructor: true
 )]
-TypeRef<IDamageEffect> damage;
+SerializedType<IDamageEffect> damage;
 ```
 
 **Workflow:**
@@ -272,10 +272,10 @@ TypeRef<IDamageEffect> damage;
 
 ## API Reference
 
-### TypeRefOptionsAttribute
+### SerializedTypeOptionsAttribute
 
 ```csharp
-public TypeRefOptionsAttribute(
+public SerializedTypeOptionsAttribute(
     bool allowGenericTypeConstruction = false,
     bool allowSelfNesting = false,
     bool allowOpenGenerics = false,
@@ -304,14 +304,14 @@ public TypeRefOptionsAttribute(
 
 **Solution:** Make sure `allowGenericTypeConstruction` is enabled:
 ```csharp
-[TypeRefOptions(allowGenericTypeConstruction: true)]
+[SerializedTypeOptions(allowGenericTypeConstruction: true)]
 ```
 
 ### Issue: "I want the old UI back"
 
 **Solution:** Enable complex constructor mode:
 ```csharp
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     useComplexConstructor: true
 )]
@@ -321,7 +321,7 @@ public TypeRefOptionsAttribute(
 
 **Solution:** Enable `allowOpenGenerics`:
 ```csharp
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     allowOpenGenerics: true
 )]
@@ -331,7 +331,7 @@ public TypeRefOptionsAttribute(
 
 **Solution:** Enable `allowSelfNesting`:
 ```csharp
-[TypeRefOptions(
+[SerializedTypeOptions(
     allowGenericTypeConstruction: true,
     allowSelfNesting: true
 )]
@@ -343,7 +343,7 @@ public TypeRefOptionsAttribute(
 
 - ✅ Inline mode is the **new default** - fast and streamlined
 - ✅ Complex constructor is **opt-in** - detailed and guided
-- ✅ Both modes respect all TypeRefOptions
+- ✅ Both modes respect all SerializedTypeOptions
 - ✅ Clear validation errors in both modes
 - ✅ No breaking changes - existing code works as-is
 - ✅ Set `useComplexConstructor: true` to use the old UI

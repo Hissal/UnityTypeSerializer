@@ -202,7 +202,7 @@ Test with these scenarios:
 - ✅ **Extreme nesting (4+ levels)** (e.g., `MegaWrapper<OuterMost<Wrapper<Container<ElementalDamage<FireElement>>>>>`)
 
 ## Files Modified
-- **TypeRefDrawer.cs**:
+- **SerializedTypeDrawer.cs**:
   - Added `nestedArgumentsCache` field for multi-parameter state persistence
   - Added `expandedNestedArgumentIndex` field to track nested expansion state
   - Updated `DrawNestedGenericConstructor()` to support recursive expansion with "Construct" buttons

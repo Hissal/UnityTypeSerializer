@@ -8,20 +8,20 @@ using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
-    /// Custom Odin drawer for TypeRef that properly handles the TypeRefOptionsAttribute.
+    /// Custom Odin drawer for SerializedType that properly handles the SerializedTypeOptionsAttribute.
     /// Delegates to either the inline drawer or complex constructor drawer based on options.
     /// </summary>
-    public sealed class TypeRefDrawer<TBase> : OdinValueDrawer<TypeRef<TBase>> where TBase : class {
-        TypeRefOptionsAttribute? options;
+    public sealed class SerializedTypeDrawer<TBase> : OdinValueDrawer<SerializedType<TBase>> where TBase : class {
+        SerializedTypeOptionsAttribute? options;
         List<Type>? availableTypes;
         bool initialized;
-        ITypeRefDrawerImplementation? drawerImplementation;
+        ISerializedTypeDrawerImplementation? drawerImplementation;
 
         protected override void Initialize() {
             base.Initialize();
             
             // Get the attribute from the property
-            options = Property.GetAttribute<TypeRefOptionsAttribute>();
+            options = Property.GetAttribute<SerializedTypeOptionsAttribute>();
             
             // Build the available types list
             RefreshAvailableTypes();
@@ -30,17 +30,17 @@ namespace Hissal.UnityTypeSerializer.Editor {
             bool useComplexConstructor = options?.UseComplexConstructor ?? false;
             
             // Cast IPropertyValueEntry to PropertyValueEntry
-            var propertyValueEntry = (PropertyValueEntry<TypeRef<TBase>>)ValueEntry;
+            var propertyValueEntry = (PropertyValueEntry<SerializedType<TBase>>)ValueEntry;
             
             if (useComplexConstructor) {
-                drawerImplementation = new ComplexConstructorTypeRefDrawer<TBase>(
+                drawerImplementation = new ComplexConstructorSerializedTypeDrawer<TBase>(
                     Property,
                     propertyValueEntry,
                     options,
                     availableTypes!
                 );
             } else {
-                drawerImplementation = new InlineTypeRefDrawer<TBase>(
+                drawerImplementation = new InlineSerializedTypeDrawer<TBase>(
                     Property,
                     propertyValueEntry,
                     options,

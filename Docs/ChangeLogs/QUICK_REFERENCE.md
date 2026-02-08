@@ -1,4 +1,4 @@
-﻿# TypeRef Infinite Nesting - Quick Reference
+﻿# SerializedType Infinite Nesting - Quick Reference
 
 ## ✅ COMPLETED FEATURES
 
@@ -128,7 +128,7 @@ MegaWrapper5<
 ## 🔧 DEBUGGING
 
 ### Log Type Info Button
-Added "Log All Type Infos" button to TypeRefExample component:
+Added "Log All Type Infos" button to SerializedTypeExample component:
 - Shows selected type for each test field
 - Displays generic arguments
 - Shows nesting depth
@@ -165,8 +165,8 @@ While infinite nesting is supported, consider:
 
 ## 📂 FILES MODIFIED
 
-1. **TypeRefDrawer.cs** - Complete rewrite with recursive approach
-2. **TypeRefExample.cs** - Added 50+ test types
+1. **SerializedTypeDrawer.cs** - Complete rewrite with recursive approach
+2. **SerializedTypeExample.cs** - Added 50+ test types
 3. **DEEP_NESTING_FEATURE.md** - Updated documentation
 4. **IMPLEMENTATION_SUMMARY.md** - Detailed technical overview
 5. **QUICK_REFERENCE.md** - This file
@@ -174,7 +174,7 @@ While infinite nesting is supported, consider:
 ## 🎉 TRY IT OUT
 
 1. Open Unity Editor
-2. Find/create GameObject with TypeRefExample component
+2. Find/create GameObject with SerializedTypeExample component
 3. Look at the "Extreme Nesting Test" field
 4. Select `MegaWrapper5<T1, T2, T3, T4, T5>`
 5. Start building your nested structure!

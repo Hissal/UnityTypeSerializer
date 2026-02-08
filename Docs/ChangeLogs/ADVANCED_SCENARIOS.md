@@ -1,4 +1,4 @@
-﻿# TypeRef Generic Type Construction - Advanced Scenarios
+﻿# SerializedType Generic Type Construction - Advanced Scenarios
 
 ## Scenario 1: Multiple Generic Parameters
 
@@ -97,8 +97,8 @@ When you select `Resistance<TElement>`:
 **Step 1:** Select an outer generic type
 ```csharp
 [SerializeField]
-[TypeRefOptions(includeGenericTypeDefinitions: true)]
-TypeRef<IMyInterface> myType;
+[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+SerializedType<IMyInterface> myType;
 
 // Select: Container<T> where T : class, IElement
 ```
@@ -154,12 +154,12 @@ All constraint checks are performed normally:
 
 ## Testing Your Setup
 
-Use the provided `TypeRefExample.cs` to test:
+Use the provided `SerializedTypeExample.cs` to test:
 
 ### Test 1: Multiple Generic Parameters
 ```csharp
-[TypeRefOptions(includeGenericTypeDefinitions: true)]
-TypeRef<IMyInterface> multiGeneric;
+[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+SerializedType<IMyInterface> multiGeneric;
 
 // Select MultiGenericType<T1, T2>
 // Pick TypeA for T1
@@ -169,8 +169,8 @@ TypeRef<IMyInterface> multiGeneric;
 
 ### Test 2: Open Generic with new() (Should Block)
 ```csharp
-[TypeRefOptions(includeGenericTypeDefinitions: true)]
-TypeRef<IMyInterface> resistance;
+[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+SerializedType<IMyInterface> resistance;
 
 // Select Resistance<TElement> (has new() constraint)
 // Should see: FireElement, WaterElement, EarthElement
@@ -179,8 +179,8 @@ TypeRef<IMyInterface> resistance;
 
 ### Test 3: Open Generic without new() (Should Allow)
 ```csharp
-[TypeRefOptions(includeGenericTypeDefinitions: true)]
-TypeRef<IMyInterface> container;
+[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+SerializedType<IMyInterface> container;
 
 // Select Container<T> (no new() constraint)
 // Should see: FireElement, WaterElement, EarthElement
