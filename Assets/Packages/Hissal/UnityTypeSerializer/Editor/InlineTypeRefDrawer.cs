@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Hissal.TypeSerializer;
 using Sirenix.OdinInspector.Editor;
-using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor {
+namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
     /// Inline drawer for TypeRef that displays everything on a single line with multiple dropdowns.
     /// This is the default, simpler mode for TypeRef fields.

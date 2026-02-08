@@ -1,10 +1,12 @@
 {
-    "name": "Hissal.TypeSerializer.Editor",
-    "rootNamespace": "Hissal.TypeSerializer.Editor",
+    "name": "Hissal.UnityTypeSerializer.Editor",
+    "rootNamespace": "",
     "references": [
         "GUID:f9785da0d0caa3949acdb2a713fcf8a7"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

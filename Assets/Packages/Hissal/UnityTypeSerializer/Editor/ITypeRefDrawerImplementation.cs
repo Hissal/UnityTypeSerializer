@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Hissal.TypeSerializer;
 using Sirenix.OdinInspector.Editor;
 using UnityEngine;
 
-namespace Editor {
+namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
     /// Interface for TypeRef drawer implementation strategies.
     /// Allows different drawing modes (inline, complex constructor) to be implemented separately.

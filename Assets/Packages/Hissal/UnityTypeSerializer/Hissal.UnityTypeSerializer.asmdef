@@ -1,6 +1,6 @@
 {
-    "name": "Hissal.TypeSerializer",
-    "rootNamespace": "Hissal.TypeSerializer",
+    "name": "Hissal.UnityTypeSerializer",
+    "rootNamespace": "",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

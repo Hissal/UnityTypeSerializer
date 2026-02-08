@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Hissal.TypeSerializer;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor {
+namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
     /// Complex constructor drawer for TypeRef that provides a detailed UI for constructing generic types.
     /// This drawer shows a full constructor interface with nested generic type support.

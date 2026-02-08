@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Hissal.TypeSerializer;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor {
+namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
     /// Custom Odin drawer for TypeRef that properly handles the TypeRefOptionsAttribute.
     /// Delegates to either the inline drawer or complex constructor drawer based on options.
