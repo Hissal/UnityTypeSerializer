@@ -15,6 +15,9 @@ namespace Editor {
     internal sealed class InlineTypeRefDrawer<TBase> : TypeRefDrawerBase<TBase>, ITypeRefDrawerImplementation 
         where TBase : class {
         
+        // UI Layout Constants
+        const float MIN_DROPDOWN_WIDTH = 60f;
+        
         readonly List<GenericSelectorItem<Type>> dropdownItems;
         
         // Track construction state for multi-parameter generics
@@ -23,6 +26,13 @@ namespace Editor {
         
         // Track the last type we rebuilt construction state from
         Type? lastRebuiltType = null;
+        
+        // Guard against re-entrant updates
+        bool isUpdating = false;
+        
+        // Cached styles for token rendering
+        GUIStyle? labelStyle;
+        GUIStyle? literalStyle;
         
         public InlineTypeRefDrawer(
             InspectorProperty property,
@@ -110,7 +120,6 @@ namespace Editor {
         
         void DrawInlineTypeSelector(Rect rect, Type? currentType) {
             bool allowGenericTypeConstruction = Options?.AllowGenericTypeConstruction ?? false;
-            bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
             if (currentType == null) {
                 // No type selected - show dropdown for base type
@@ -131,7 +140,7 @@ namespace Editor {
             }
             
             // At this point we have a generic type and construction is allowed
-            // Draw inline construction UI
+            // Draw inline construction UI using token-based rendering
             DrawInlineGenericConstruction(rect, currentType);
         }
         
@@ -145,175 +154,24 @@ namespace Editor {
                 var selector = new GenericSelector<Type>("Select Type", false, dropdownItems);
                 selector.SelectionConfirmed += selection => {
                     var selectedType = selection.FirstOrDefault();
-                    ValueEntry.SmartValue = new TypeRef<TBase> { Type = selectedType };
-                    ValueEntry.ApplyChanges();
+                    UpdateValue(selectedType);
                 };
                 selector.ShowInPopup(rect.position);
             }
         }
         
         void DrawInlineGenericConstruction(Rect rect, Type currentType) {
-            // Build a list of all dropdowns to render (recursively)
-            var dropdowns = BuildDropdownList(currentType);
+            // Build tokens for code-like rendering
+            var tokens = BuildRenderTokens(currentType);
             
-            if (dropdowns.Count == 0) {
+            if (tokens.Count == 0) {
                 // Fallback to simple dropdown
                 DrawBaseTypeDropdown(rect, currentType);
                 return;
             }
             
-            // Calculate widths for each dropdown
-            float totalWidth = rect.width;
-            float dropdownSpacing = 2f;
-            float availableWidth = totalWidth - (dropdowns.Count - 1) * dropdownSpacing;
-            float dropdownWidth = availableWidth / dropdowns.Count;
-            
-            float currentX = rect.x;
-            
-            for (int i = 0; i < dropdowns.Count; i++) {
-                var dropdown = dropdowns[i];
-                float width = dropdownWidth;
-                
-                if (i == dropdowns.Count - 1) {
-                    // Last dropdown - use remaining width
-                    width = rect.x + rect.width - currentX;
-                }
-                
-                var dropdownRect = new Rect(currentX, rect.y, width - dropdownSpacing, rect.height);
-                DrawDropdown(dropdownRect, dropdown);
-                
-                currentX += width;
-            }
-        }
-        
-        List<DropdownInfo> BuildDropdownList(Type currentType) {
-            var dropdowns = new List<DropdownInfo>();
-            var visited = new HashSet<string>(); // Track visited type+path to prevent infinite recursion
-            BuildDropdownListRecursive(currentType, dropdowns, new List<int>(), visited, 0);
-            return dropdowns;
-        }
-        
-        void BuildDropdownListRecursive(Type type, List<DropdownInfo> dropdowns, List<int> path, HashSet<string> visited, int depth) {
-            // Prevent infinite recursion
-            const int MAX_DEPTH = 10;
-            if (depth > MAX_DEPTH) {
-                return;
-            }
-            
-            // Create a unique key for this type+path combination
-            var pathKey = string.Join("/", path);
-            var visitKey = $"{type.AssemblyQualifiedName}@{pathKey}";
-            
-            if (visited.Contains(visitKey)) {
-                // Already visited this type at this path - stop to prevent cycles
-                return;
-            }
-            visited.Add(visitKey);
-            
-            if (type.IsGenericTypeDefinition) {
-                // Open generic - need to show the base type and placeholder for each arg
-                var genericParams = type.GetGenericArguments();
-                
-                // Add base type dropdown
-                dropdowns.Add(new DropdownInfo {
-                    Type = type,
-                    IsBaseType = true,
-                    Path = new List<int>(path),
-                    GenericDefinition = type
-                });
-                
-                // Check if we have construction state for this type
-                Type?[]? stateArgs = null;
-                if (constructionState.TryGetValue(type, out var stored)) {
-                    stateArgs = stored;
-                }
-                
-                // Add dropdown for each generic parameter
-                for (int i = 0; i < genericParams.Length; i++) {
-                    var argPath = new List<int>(path) { i };
-                    var selectedType = stateArgs != null && i < stateArgs.Length ? stateArgs[i] : null;
-                    
-                    if (selectedType != null) {
-                        // We have a selection for this parameter
-                        if (selectedType.IsGenericType || selectedType.IsGenericTypeDefinition) {
-                            // Nested generic - recurse
-                            BuildDropdownListRecursive(selectedType, dropdowns, argPath, visited, depth + 1);
-                        } else {
-                            // Concrete type
-                            dropdowns.Add(new DropdownInfo {
-                                Type = selectedType,
-                                IsGenericArgument = true,
-                                ArgumentIndex = i,
-                                Path = argPath,
-                                GenericDefinition = type
-                            });
-                        }
-                    } else {
-                        // No selection yet - show placeholder
-                        dropdowns.Add(new DropdownInfo {
-                            Type = null,
-                            IsGenericArgument = true,
-                            ArgumentIndex = i,
-                            Path = argPath,
-                            GenericDefinition = type,
-                            GenericParameter = genericParams[i]
-                        });
-                    }
-                }
-            } else if (type.IsGenericType) {
-                // Constructed generic - show base type and recurse for each argument
-                var genericDefinition = type.GetGenericTypeDefinition();
-                var genericArgs = type.GetGenericArguments();
-                
-                // DON'T modify construction state during rendering - only read it
-                // Construction state should only be updated during type updates, not during UI rendering
-                
-                // Add base type dropdown
-                dropdowns.Add(new DropdownInfo {
-                    Type = genericDefinition,
-                    IsBaseType = true,
-                    Path = new List<int>(path),
-                    GenericDefinition = genericDefinition,
-                    ConstructedType = type
-                });
-                
-                // Recursively process each generic argument
-                for (int i = 0; i < genericArgs.Length; i++) {
-                    var arg = genericArgs[i];
-                    var argPath = new List<int>(path) { i };
-                    
-                    if (arg.IsGenericParameter) {
-                        // Unresolved generic parameter - show placeholder
-                        dropdowns.Add(new DropdownInfo {
-                            Type = null,
-                            IsGenericArgument = true,
-                            ArgumentIndex = i,
-                            Path = argPath,
-                            GenericDefinition = genericDefinition,
-                            GenericParameter = arg
-                        });
-                    } else if (arg.IsGenericType || arg.IsGenericTypeDefinition) {
-                        // Nested generic - recurse
-                        BuildDropdownListRecursive(arg, dropdowns, argPath, visited, depth + 1);
-                    } else {
-                        // Concrete type argument
-                        dropdowns.Add(new DropdownInfo {
-                            Type = arg,
-                            IsGenericArgument = true,
-                            ArgumentIndex = i,
-                            Path = argPath,
-                            GenericDefinition = genericDefinition
-                        });
-                    }
-                }
-            } else {
-                // Concrete type
-                dropdowns.Add(new DropdownInfo {
-                    Type = type,
-                    IsBaseType = true,
-                    Path = new List<int>(path)
-                });
-            }
+            // Draw the tokens
+            DrawInlineTokens(rect, tokens);
         }
         
         void DrawDropdown(Rect rect, DropdownInfo info) {
@@ -363,8 +221,7 @@ namespace Editor {
                     if (info.Path.Count == 0) {
                         // Root level base type - replace entire type
                         constructionState.Clear();
-                        ValueEntry.SmartValue = new TypeRef<TBase> { Type = selectedType };
-                        ValueEntry.ApplyChanges();
+                        UpdateValue(selectedType);
                     } else {
                         // Nested base type - update at path
                         UpdateGenericArgumentAtPath(info.Path, selectedType);
@@ -470,15 +327,13 @@ namespace Editor {
                     args[argIndex] = newArgumentType;
                     
                     // Try to construct the type if we have all arguments
-                    bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
                     bool allSelected = args.All(a => a != null);
                     
                     if (allSelected) {
                         // All arguments selected - construct the type
                         try {
                             var constructedType = currentType.MakeGenericType(args.Cast<Type>().ToArray());
-                            ValueEntry.SmartValue = new TypeRef<TBase> { Type = constructedType };
-                            ValueEntry.ApplyChanges();
+                            UpdateValue(constructedType);
                         } catch {
                             // Construction failed - keep as open generic
                         }
@@ -500,8 +355,7 @@ namespace Editor {
                         var constructedType = genericDefinition.MakeGenericType(newArgs);
                         // Also update construction state
                         constructionState[genericDefinition] = newArgs;
-                        ValueEntry.SmartValue = new TypeRef<TBase> { Type = constructedType };
-                        ValueEntry.ApplyChanges();
+                        UpdateValue(constructedType);
                     } catch {
                         // Construction failed
                     }
@@ -538,8 +392,7 @@ namespace Editor {
                         if (allSelected) {
                             try {
                                 var constructedType = currentType.MakeGenericType(args.Cast<Type>().ToArray());
-                                ValueEntry.SmartValue = new TypeRef<TBase> { Type = constructedType };
-                                ValueEntry.ApplyChanges();
+                                UpdateValue(constructedType);
                             } catch {
                                 // Construction failed
                             }
@@ -549,8 +402,7 @@ namespace Editor {
                     // Already constructed - update recursively
                     var updatedType = UpdateTypeAtPathRecursive(currentType, path, newArgumentType);
                     if (updatedType != null) {
-                        ValueEntry.SmartValue = new TypeRef<TBase> { Type = updatedType };
-                        ValueEntry.ApplyChanges();
+                        UpdateValue(updatedType);
                     }
                 }
             }
@@ -634,7 +486,6 @@ namespace Editor {
         }
         
         List<Type> BuildValidTypesForGenericParameter(Type[] constraints, List<int> path) {
-            bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             bool allowSelfNesting = Options?.AllowSelfNesting ?? false;
             
             // Collect all types in the current type tree path to check for self-nesting
@@ -719,6 +570,248 @@ namespace Editor {
             return type;
         }
         
+        /// <summary>
+        /// Safe wrapper for updating the TypeRef value.
+        /// Guards against re-entrant updates that cause collection modification errors.
+        /// </summary>
+        void UpdateValue(Type? newType) {
+            if (isUpdating) return;
+            
+            try {
+                isUpdating = true;
+                ValueEntry.SmartValue = new TypeRef<TBase> { Type = newType };
+                ValueEntry.ApplyChanges();
+            } finally {
+                isUpdating = false;
+            }
+        }
+        
+        /// <summary>
+        /// Build render tokens for code-like display with literal &lt;, ,, &gt; and labels.
+        /// </summary>
+        List<RenderToken> BuildRenderTokens(Type? currentType) {
+            var tokens = new List<RenderToken>();
+            
+            if (currentType == null) {
+                // No type selected - single dropdown
+                tokens.Add(new RenderToken {
+                    Kind = TokenKind.Dropdown,
+                    Info = new DropdownInfo {
+                        Type = null,
+                        IsBaseType = true,
+                        Path = new List<int>()
+                    }
+                });
+                return tokens;
+            }
+            
+            var visited = new HashSet<string>();
+            AppendTypeTokens(currentType, tokens, new List<int>(), visited, 0);
+            return tokens;
+        }
+        
+        /// <summary>
+        /// Recursively append tokens for a type, including nested generics.
+        /// </summary>
+        void AppendTypeTokens(Type type, List<RenderToken> tokens, List<int> path, HashSet<string> visited, int depth) {
+            const int MAX_DEPTH = 10;
+            if (depth > MAX_DEPTH) return;
+            
+            // Create a unique key for this type+path combination
+            var pathKey = string.Join("/", path);
+            var visitKey = $"{type.AssemblyQualifiedName}@{pathKey}";
+            if (visited.Contains(visitKey)) return;
+            visited.Add(visitKey);
+            
+            bool isGeneric = type.IsGenericType || type.IsGenericTypeDefinition;
+            Type? genericDef = null;
+            Type[]? genericArgs = null;
+            Type[]? genericParams = null;
+            
+            if (type.IsGenericTypeDefinition) {
+                genericDef = type;
+                genericParams = type.GetGenericArguments();
+                // Check construction state for selected args
+                // If no construction state exists yet, initialize it so placeholders can be rendered
+                if (!constructionState.TryGetValue(type, out var stateArgs)) {
+                    stateArgs = new Type?[genericParams.Length];
+                    constructionState[type] = stateArgs;
+                }
+                genericArgs = stateArgs;
+            } else if (type.IsGenericType) {
+                genericDef = type.GetGenericTypeDefinition();
+                genericArgs = type.GetGenericArguments();
+                genericParams = genericDef.GetGenericArguments();
+            }
+            
+            // Add the base type dropdown
+            tokens.Add(new RenderToken {
+                Kind = TokenKind.Dropdown,
+                Info = new DropdownInfo {
+                    Type = isGeneric ? genericDef : type,
+                    IsBaseType = true,
+                    Path = new List<int>(path),
+                    GenericDefinition = genericDef,
+                    ConstructedType = isGeneric && !type.IsGenericTypeDefinition ? type : null
+                }
+            });
+            
+            if (!isGeneric || genericArgs == null || genericParams == null) {
+                return; // Non-generic type, we're done
+            }
+            
+            // Add opening angle bracket
+            tokens.Add(RenderToken.Literal(" <"));
+            
+            // Process each generic argument
+            for (int i = 0; i < genericArgs.Length; i++) {
+                if (i > 0) {
+                    tokens.Add(RenderToken.Literal(", "));
+                }
+                
+                // Add parameter label (T:, TKey:, etc.)
+                string label = GetGenericLabel(genericParams[i], i);
+                tokens.Add(RenderToken.Label(label + ": "));
+                
+                var arg = genericArgs[i];
+                var argPath = new List<int>(path) { i };
+                
+                if (arg == null) {
+                    // No selection yet - placeholder dropdown
+                    tokens.Add(new RenderToken {
+                        Kind = TokenKind.Dropdown,
+                        Info = new DropdownInfo {
+                            Type = null,
+                            IsGenericArgument = true,
+                            ArgumentIndex = i,
+                            Path = argPath,
+                            GenericDefinition = genericDef,
+                            GenericParameter = genericParams[i]
+                        }
+                    });
+                } else if (arg.IsGenericParameter) {
+                    // Unresolved generic parameter
+                    tokens.Add(new RenderToken {
+                        Kind = TokenKind.Dropdown,
+                        Info = new DropdownInfo {
+                            Type = null,
+                            IsGenericArgument = true,
+                            ArgumentIndex = i,
+                            Path = argPath,
+                            GenericDefinition = genericDef,
+                            GenericParameter = arg
+                        }
+                    });
+                } else if (arg.IsGenericType || arg.IsGenericTypeDefinition) {
+                    // Nested generic - recurse
+                    AppendTypeTokens(arg, tokens, argPath, visited, depth + 1);
+                } else {
+                    // Concrete type
+                    tokens.Add(new RenderToken {
+                        Kind = TokenKind.Dropdown,
+                        Info = new DropdownInfo {
+                            Type = arg,
+                            IsGenericArgument = true,
+                            ArgumentIndex = i,
+                            Path = argPath,
+                            GenericDefinition = genericDef
+                        }
+                    });
+                }
+            }
+            
+            // Add closing angle bracket
+            tokens.Add(RenderToken.Literal(" >"));
+        }
+        
+        /// <summary>
+        /// Get a label for a generic parameter.
+        /// Uses the parameter name if available, otherwise falls back to T1, T2, etc.
+        /// </summary>
+        string GetGenericLabel(Type genericParam, int index) {
+            if (genericParam != null && !string.IsNullOrWhiteSpace(genericParam.Name)) {
+                return genericParam.Name;
+            }
+            return $"T{index + 1}";
+        }
+        
+        /// <summary>
+        /// Draw tokens as a code-like inline expression.
+        /// </summary>
+        void DrawInlineTokens(Rect rect, List<RenderToken> tokens) {
+            if (tokens.Count == 0) return;
+            
+            // Initialize cached styles if needed
+            if (labelStyle == null) {
+                labelStyle = new GUIStyle(EditorStyles.label) {
+                    fontSize = Mathf.Max(9, EditorStyles.label.fontSize - 1),
+                    normal = { textColor = new Color(0.6f, 0.6f, 0.6f, 0.8f) }
+                };
+            }
+            
+            if (literalStyle == null) {
+                literalStyle = new GUIStyle(EditorStyles.label) {
+                    fontSize = EditorStyles.label.fontSize,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = new Color(0.5f, 0.5f, 0.5f, 1f) }
+                };
+            }
+            
+            // First pass: calculate widths
+            float totalLiteralWidth = 0f;
+            float totalLabelWidth = 0f;
+            int dropdownCount = 0;
+            
+            foreach (var token in tokens) {
+                switch (token.Kind) {
+                    case TokenKind.Literal:
+                        totalLiteralWidth += literalStyle.CalcSize(new GUIContent(token.Text)).x;
+                        break;
+                    case TokenKind.Label:
+                        totalLabelWidth += labelStyle.CalcSize(new GUIContent(token.Text)).x;
+                        break;
+                    case TokenKind.Dropdown:
+                        dropdownCount++;
+                        break;
+                }
+            }
+            
+            // Allocate remaining space to dropdowns
+            float availableForDropdowns = rect.width - totalLiteralWidth - totalLabelWidth;
+            float dropdownWidth = dropdownCount > 0 ? availableForDropdowns / dropdownCount : 0f;
+            dropdownWidth = Mathf.Max(MIN_DROPDOWN_WIDTH, dropdownWidth);
+            
+            // Second pass: render tokens
+            float currentX = rect.x;
+            
+            foreach (var token in tokens) {
+                switch (token.Kind) {
+                    case TokenKind.Literal: {
+                        var size = literalStyle.CalcSize(new GUIContent(token.Text));
+                        var literalRect = new Rect(currentX, rect.y, size.x, rect.height);
+                        EditorGUI.LabelField(literalRect, token.Text, literalStyle);
+                        currentX += size.x;
+                        break;
+                    }
+                    case TokenKind.Label: {
+                        var size = labelStyle.CalcSize(new GUIContent(token.Text));
+                        var labelRect = new Rect(currentX, rect.y, size.x, rect.height);
+                        EditorGUI.LabelField(labelRect, token.Text, labelStyle);
+                        currentX += size.x;
+                        break;
+                    }
+                    case TokenKind.Dropdown: {
+                        if (token.Info.HasValue) {
+                            var dropdownRect = new Rect(currentX, rect.y, dropdownWidth, rect.height);
+                            DrawDropdown(dropdownRect, token.Info.Value);
+                            currentX += dropdownWidth;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
         void CollectTypesInPath(Type type, List<int> targetPath, HashSet<Type> result) {
             // If path is empty, we've reached the target node - don't add it
             // We want to collect types UP TO but not INCLUDING the target
@@ -754,6 +847,28 @@ namespace Editor {
                     }
                 }
             }
+        }
+        
+        enum TokenKind {
+            Literal,    // Text tokens like "<", ",", ">"
+            Label,      // Parameter labels like "T1:", "TKey:"
+            Dropdown    // Interactive type selector dropdown
+        }
+        
+        struct RenderToken {
+            public TokenKind Kind;
+            public string Text;
+            public DropdownInfo? Info;
+            
+            public static RenderToken Literal(string text) => new RenderToken { 
+                Kind = TokenKind.Literal, 
+                Text = text 
+            };
+            
+            public static RenderToken Label(string text) => new RenderToken { 
+                Kind = TokenKind.Label, 
+                Text = text 
+            };
         }
         
         struct DropdownInfo {
