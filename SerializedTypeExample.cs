@@ -88,6 +88,24 @@ namespace Hissal.UnityTypeSerializer {
         [SerializedTypeOptions(allowGenericTypeConstruction: true)]
         SerializedType<IStrategy>? strategy;
 
+        [Title("Non-Generic SerializedType (New)", bold: true)]
+        [InfoBox("Non-Generic SerializedType - Accepts any type\n" +
+                 "This is a convenience type equivalent to SerializedType<object>.")]
+        [SerializeField]
+        SerializedType? anyType;
+
+        [InfoBox("Non-Generic with IncludeTypes filter\n" +
+                 "Only shows specific types via IncludeTypes attribute property.")]
+        [SerializeField]
+        [SerializedTypeOptions(IncludeTypes = new[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) })]
+        SerializedType? filteredAnyType;
+
+        [InfoBox("Non-Generic with generic construction enabled\n" +
+                 "Shows generic types and allows construction.")]
+        [SerializeField]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType? anyTypeWithGenerics;
+
         [Button("Log All Type Infos", ButtonSizes.Large), GUIColor(0.4f, 0.8f, 1f)]
         void LogAllTypeInfos() {
             Debug.Log("=== SerializedType Test Cases - Type Information ===\n");
@@ -105,11 +123,34 @@ namespace Hissal.UnityTypeSerializer {
             LogTypeInfo("Damage Effect", damageEffect);
             LogTypeInfo("Repository", repository);
             LogTypeInfo("Strategy", strategy);
+            LogTypeInfoNonGeneric("Any Type", anyType);
+            LogTypeInfoNonGeneric("Filtered Any Type", filteredAnyType);
+            LogTypeInfoNonGeneric("Any Type With Generics", anyTypeWithGenerics);
             
             Debug.Log("\n=== End of Type Information ===");
         }
 
         void LogTypeInfo<T>(string testName, SerializedType<T>? serializedType) where T : class {
+            if (serializedType?.HasType != true) {
+                Debug.Log($"[{testName}] No type selected");
+                return;
+            }
+
+            var type = serializedType.Type;
+            var typeDescription = type.IsGenericTypeDefinition 
+                ? $"{GetFullTypeName(type)} (OPEN GENERIC)" 
+                : GetFullTypeName(type);
+                
+            Debug.Log($"[{testName}] Selected: {typeDescription}");
+            
+            if (type.IsGenericType && !type.IsGenericTypeDefinition) {
+                var genericArgs = type.GetGenericArguments();
+                Debug.Log($"  └─ Generic arguments: {string.Join(", ", System.Array.ConvertAll(genericArgs, GetFullTypeName))}");
+                Debug.Log($"  └─ Nesting depth: {GetNestingDepth(type)}");
+            }
+        }
+
+        void LogTypeInfoNonGeneric(string testName, SerializedType? serializedType) {
             if (serializedType?.HasType != true) {
                 Debug.Log($"[{testName}] No type selected");
                 return;

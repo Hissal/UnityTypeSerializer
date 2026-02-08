@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
@@ -11,9 +10,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
     /// Complex constructor drawer for SerializedType that provides a detailed UI for constructing generic types.
     /// This drawer shows a full constructor interface with nested generic type support.
+    /// Shared between generic and non-generic SerializedType via <see cref="ISerializedTypeValueAccessor"/>.
     /// </summary>
-    internal sealed class ComplexConstructorSerializedTypeDrawer<TBase> : SerializedTypeDrawerBase<TBase>, ISerializedTypeDrawerImplementation 
-        where TBase : class {
+    internal sealed class ComplexConstructorSerializedTypeDrawer : SerializedTypeDrawerBase, ISerializedTypeDrawerImplementation {
         
         Type[]? selectedTypeArguments;
         GenericConstructionState? constructionState;
@@ -21,10 +20,10 @@ namespace Hissal.UnityTypeSerializer.Editor {
         
         public ComplexConstructorSerializedTypeDrawer(
             InspectorProperty property,
-            PropertyValueEntry<SerializedType<TBase>> valueEntry,
+            ISerializedTypeValueAccessor accessor,
             SerializedTypeOptionsAttribute? options,
             List<Type> availableTypes) 
-            : base(property, valueEntry, options, availableTypes) {
+            : base(property, accessor, options, availableTypes) {
             
             // Build dropdown items
             dropdownItems = new List<GenericSelectorItem<Type>>();
@@ -34,7 +33,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
         
         public void DrawPropertyLayout(GUIContent label) {
-            var currentType = ValueEntry.SmartValue?.Type;
+            var currentType = Accessor.GetSelectedType();
             bool allowGenericTypeConstruction = Options?.AllowGenericTypeConstruction ?? false;
             bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
@@ -65,32 +64,32 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     if (selectedType != null && selectedType.IsGenericTypeDefinition) {
                         if (allowOpenGenerics && !allowGenericTypeConstruction) {
                             // When only AllowOpenGenerics is true (no construction), immediately assign the open generic
-                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
+                            Accessor.SetSelectedType(selectedType);
                             selectedTypeArguments = null;
                         }
                         else if (!allowOpenGenerics && allowGenericTypeConstruction) {
                             // When only AllowGenericTypeConstruction is true (no open generics), force construction
-                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
+                            Accessor.SetSelectedType(selectedType);
                             var argCount = selectedType.GetGenericArguments().Length;
                             selectedTypeArguments = new Type[argCount];
                         }
                         else if (allowOpenGenerics && allowGenericTypeConstruction) {
                             // When both are true, assign the open generic (construct button will appear)
-                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
+                            Accessor.SetSelectedType(selectedType);
                             selectedTypeArguments = null;
                         }
                         else {
                             // Neither option is enabled - this shouldn't happen
-                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = null };
+                            Accessor.SetSelectedType(null);
                             selectedTypeArguments = null;
                         }
                     }
                     else {
                         // Concrete type selected
-                        ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
+                        Accessor.SetSelectedType(selectedType);
                         selectedTypeArguments = null;
                     }
-                    ValueEntry.ApplyChanges();
+                    Accessor.ApplyChanges();
                 };
                 selector.ShowInPopup(rect.position);
             }
@@ -190,8 +189,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
                 else {
                     // Clear the type entirely when open generics aren't allowed
-                    ValueEntry.SmartValue = new SerializedType<TBase> { Type = null };
-                    ValueEntry.ApplyChanges();
+                    Accessor.SetSelectedType(null);
+                    Accessor.ApplyChanges();
                 }
                 
                 selectedTypeArguments = null;
@@ -396,8 +395,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 
                 // All arguments are selected - construct the type
                 var constructedType = openGenericType.MakeGenericType(processedArgs.Cast<Type>().ToArray());
-                ValueEntry.SmartValue = new SerializedType<TBase> { Type = constructedType };
-                ValueEntry.ApplyChanges();
+                Accessor.SetSelectedType(constructedType);
+                Accessor.ApplyChanges();
                 selectedTypeArguments = null;
                 constructionState = null;
             }
@@ -495,8 +494,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 GUI.backgroundColor = new Color(0.7f, 0.7f, 0.7f, 0.5f);
                 if (GUILayout.Button("⟲", GUILayout.Width(20), GUILayout.Height(14))) {
                     // Clear the entire construction and reset to allow repicking the root type
-                    ValueEntry.SmartValue = new SerializedType<TBase> { Type = null };
-                    ValueEntry.ApplyChanges();
+                    Accessor.SetSelectedType(null);
+                    Accessor.ApplyChanges();
                     
                     // Clear all construction state including nested paths
                     if (constructionState != null) {
@@ -701,22 +700,24 @@ namespace Hissal.UnityTypeSerializer.Editor {
             bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
             // Resolve custom filter types if any
-            var customFilterTypes = GetFilteredTypes(
+            var customFilterTypes = SerializedTypeDrawerCore.GetFilteredTypes(
                 Options?.IncludeTypes,
-                Options?.IncludeTypesResolver
+                Options?.IncludeTypesResolver,
+                Property
             )?.ToList();
             
             // Resolve excluded types if any
-            var excludedTypes = GetFilteredTypes(
+            var excludedTypes = SerializedTypeDrawerCore.GetFilteredTypes(
                 Options?.ExcludeTypes,
-                Options?.ExcludeTypesResolver
+                Options?.ExcludeTypesResolver,
+                Property
             )?.ToHashSet();
             
             // Build chain of parent generic types for self-nesting check
             var parentGenericTypes = new HashSet<Type>();
             if (!allowSelfNesting) {
                 // Get the root generic type being constructed
-                var rootType = ValueEntry.SmartValue?.Type;
+                var rootType = Accessor.GetSelectedType();
                 if (rootType != null && rootType.IsGenericTypeDefinition) {
                     parentGenericTypes.Add(rootType);
                 }
@@ -835,94 +836,6 @@ namespace Hissal.UnityTypeSerializer.Editor {
             selector.ShowInPopup();
         }
         
-        IEnumerable<Type>? GetFilteredTypes(Type[]? typeArray, string? resolverMemberName) {
-            var result = new HashSet<Type>();
-            
-            // Add types from array
-            if (typeArray != null && typeArray.Length > 0) {
-                foreach (var type in typeArray) {
-                    if (type != null)
-                        result.Add(type);
-                }
-            }
-            
-            // Add types from resolver
-            if (!string.IsNullOrWhiteSpace(resolverMemberName)) {
-                var resolvedTypes = ResolveTypesFromMember(resolverMemberName);
-                if (resolvedTypes != null) {
-                    foreach (var type in resolvedTypes) {
-                        if (type != null)
-                            result.Add(type);
-                    }
-                }
-            }
-            
-            return result.Count > 0 ? result : null;
-        }
-        
-        IEnumerable<Type>? ResolveTypesFromMember(string memberName) {
-            try {
-                Type? targetType = null;
-                string? targetMemberName = null;
-                
-                // Parse format: "TypeName.MemberName" or "MemberName"
-                var parts = memberName.Split('.');
-                if (parts.Length == 1) {
-                    // Just member name - search in declaring type
-                    targetType = Property.Parent?.ValueEntry?.TypeOfValue;
-                    targetMemberName = parts[0];
-                }
-                else if (parts.Length == 2) {
-                    // TypeName.MemberName
-                    var typeName = parts[0];
-                    targetMemberName = parts[1];
-                    
-                    // Try to find the type
-                    targetType = AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(a => {
-                            try { return a.GetTypes(); }
-                            catch { return Enumerable.Empty<Type>(); }
-                        })
-                        .FirstOrDefault(t => t.Name == typeName || t.FullName == typeName);
-                }
-                
-                if (targetType == null || targetMemberName == null) {
-                    Debug.LogWarning($"Could not resolve type from: {memberName}");
-                    return null;
-                }
-                
-                // Try to find and invoke the member
-                const BindingFlags c_flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-                
-                // Try property first
-                var property = targetType.GetProperty(targetMemberName, c_flags);
-                if (property != null && typeof(IEnumerable<Type>).IsAssignableFrom(property.PropertyType)) {
-                    var value = property.GetValue(null);
-                    return value as IEnumerable<Type>;
-                }
-                
-                // Try method
-                var method = targetType.GetMethod(targetMemberName, c_flags, null, Type.EmptyTypes, null);
-                if (method != null && typeof(IEnumerable<Type>).IsAssignableFrom(method.ReturnType)) {
-                    var value = method.Invoke(null, null);
-                    return value as IEnumerable<Type>;
-                }
-                
-                // Try field
-                var field = targetType.GetField(targetMemberName, c_flags);
-                if (field != null && typeof(IEnumerable<Type>).IsAssignableFrom(field.FieldType)) {
-                    var value = field.GetValue(null);
-                    return value as IEnumerable<Type>;
-                }
-                
-                Debug.LogWarning($"Member '{targetMemberName}' not found on type '{targetType.Name}' or is not an IEnumerable<Type>");
-                return null;
-            }
-            catch (Exception ex) {
-                Debug.LogError($"Error resolving types from member '{memberName}': {ex.Message}");
-                return null;
-            }
-        }
     }
     
     static class SerializedTypeDrawerStyles {

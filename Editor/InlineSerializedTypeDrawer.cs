@@ -9,9 +9,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
     /// Inline drawer for SerializedType that displays everything on a single line with multiple dropdowns.
     /// This is the default, simpler mode for SerializedType fields.
+    /// Shared between generic and non-generic SerializedType via <see cref="ISerializedTypeValueAccessor"/>.
     /// </summary>
-    internal sealed class InlineSerializedTypeDrawer<TBase> : SerializedTypeDrawerBase<TBase>, ISerializedTypeDrawerImplementation 
-        where TBase : class {
+    internal sealed class InlineSerializedTypeDrawer : SerializedTypeDrawerBase, ISerializedTypeDrawerImplementation {
         
         // UI Layout Constants
         const float MIN_DROPDOWN_WIDTH = 60f;
@@ -34,10 +34,10 @@ namespace Hissal.UnityTypeSerializer.Editor {
         
         public InlineSerializedTypeDrawer(
             InspectorProperty property,
-            PropertyValueEntry<SerializedType<TBase>> valueEntry,
+            ISerializedTypeValueAccessor accessor,
             SerializedTypeOptionsAttribute? options,
             List<Type> availableTypes) 
-            : base(property, valueEntry, options, availableTypes) {
+            : base(property, accessor, options, availableTypes) {
             
             // Build dropdown items
             dropdownItems = new List<GenericSelectorItem<Type>>();
@@ -47,7 +47,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
         
         public void DrawPropertyLayout(GUIContent label) {
-            var currentType = ValueEntry.SmartValue?.Type;
+            var currentType = Accessor.GetSelectedType();
             
             // Only rebuild construction state if the stored type actually changed
             // This preserves partial selections for open generics
@@ -203,7 +203,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             List<GenericSelectorItem<Type>> items;
 
             if (info.Path.Count > 0) {
-                var currentType = ValueEntry.SmartValue?.Type;
+                var currentType = Accessor.GetSelectedType();
                 var genericParam = currentType != null ? GetGenericParameterAtPath(currentType, info.Path) : null;
                 var constraints = genericParam?.GetGenericParameterConstraints() ?? Array.Empty<Type>();
                 var validTypes = BuildValidTypesForGenericParameter(constraints, info.Path);
@@ -302,7 +302,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
         
         void UpdateGenericArgumentAtPath(List<int> path, Type newArgumentType) {
-            var currentType = ValueEntry.SmartValue?.Type;
+            var currentType = Accessor.GetSelectedType();
             if (currentType == null || path.Count == 0)
                 return;
             
@@ -489,7 +489,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // Collect all types in the current type tree path to check for self-nesting
             var typesInPath = new HashSet<Type>();
             if (!allowSelfNesting) {
-                var currentType = ValueEntry.SmartValue?.Type;
+                var currentType = Accessor.GetSelectedType();
                 if (currentType != null) {
                     // Build the effective current type including construction state
                     var effectiveType = BuildTypeFromConstructionState(currentType);
@@ -577,8 +577,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
             
             try {
                 isUpdating = true;
-                ValueEntry.SmartValue = new SerializedType<TBase> { Type = newType };
-                ValueEntry.ApplyChanges();
+                Accessor.SetSelectedType(newType);
+                Accessor.ApplyChanges();
             } finally {
                 isUpdating = false;
             }

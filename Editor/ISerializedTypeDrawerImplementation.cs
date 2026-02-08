@@ -5,41 +5,13 @@ using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
-    /// Interface for SerializedType drawer implementation strategies.
-    /// Allows different drawing modes (inline, complex constructor) to be implemented separately.
+    /// Shared utilities for SerializedType drawer implementations.
     /// </summary>
-    internal interface ISerializedTypeDrawerImplementation {
-        /// <summary>
-        /// Draws the SerializedType property with the appropriate UI.
-        /// </summary>
-        /// <param name="label">The label to display for the property</param>
-        void DrawPropertyLayout(GUIContent label);
-    }
-    
-    /// <summary>
-    /// Base class containing shared utilities for SerializedType drawer implementations.
-    /// </summary>
-    internal abstract class SerializedTypeDrawerBase<TBase> where TBase : class {
-        protected readonly InspectorProperty Property;
-        protected readonly PropertyValueEntry<SerializedType<TBase>> ValueEntry;
-        protected readonly SerializedTypeOptionsAttribute? Options;
-        protected readonly List<Type> AvailableTypes;
-        
-        protected SerializedTypeDrawerBase(
-            InspectorProperty property,
-            PropertyValueEntry<SerializedType<TBase>> valueEntry,
-            SerializedTypeOptionsAttribute? options,
-            List<Type> availableTypes) {
-            Property = property;
-            ValueEntry = valueEntry;
-            Options = options;
-            AvailableTypes = availableTypes;
-        }
-        
+    internal static class SerializedTypeDrawerUtilities {
         /// <summary>
         /// Gets a display name for a type, including generic parameters if applicable.
         /// </summary>
-        protected static string GetTypeName(Type type) {
+        public static string GetTypeName(Type type) {
             if (!type.IsGenericType)
                 return type.Name;
 
@@ -57,6 +29,47 @@ namespace Hissal.UnityTypeSerializer.Editor {
             }));
             
             return $"{baseName}<{argNames}>";
+        }
+    }
+    
+    /// <summary>
+    /// Interface for SerializedType drawer implementation strategies.
+    /// Allows different drawing modes (inline, complex constructor) to be implemented separately.
+    /// </summary>
+    internal interface ISerializedTypeDrawerImplementation {
+        /// <summary>
+        /// Draws the SerializedType property with the appropriate UI.
+        /// </summary>
+        /// <param name="label">The label to display for the property</param>
+        void DrawPropertyLayout(GUIContent label);
+    }
+    
+    /// <summary>
+    /// Base class containing shared utilities for SerializedType drawer implementations.
+    /// Uses <see cref="ISerializedTypeValueAccessor"/> to abstract over the generic vs non-generic value entry.
+    /// </summary>
+    internal abstract class SerializedTypeDrawerBase {
+        protected readonly InspectorProperty Property;
+        protected readonly ISerializedTypeValueAccessor Accessor;
+        protected readonly SerializedTypeOptionsAttribute? Options;
+        protected readonly List<Type> AvailableTypes;
+        
+        protected SerializedTypeDrawerBase(
+            InspectorProperty property,
+            ISerializedTypeValueAccessor accessor,
+            SerializedTypeOptionsAttribute? options,
+            List<Type> availableTypes) {
+            Property = property;
+            Accessor = accessor;
+            Options = options;
+            AvailableTypes = availableTypes;
+        }
+        
+        /// <summary>
+        /// Gets a display name for a type, including generic parameters if applicable.
+        /// </summary>
+        protected static string GetTypeName(Type type) {
+            return SerializedTypeDrawerUtilities.GetTypeName(type);
         }
         
         /// <summary>
