@@ -5,30 +5,30 @@ using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
-    /// Interface for TypeRef drawer implementation strategies.
+    /// Interface for SerializedType drawer implementation strategies.
     /// Allows different drawing modes (inline, complex constructor) to be implemented separately.
     /// </summary>
-    internal interface ITypeRefDrawerImplementation {
+    internal interface ISerializedTypeDrawerImplementation {
         /// <summary>
-        /// Draws the TypeRef property with the appropriate UI.
+        /// Draws the SerializedType property with the appropriate UI.
         /// </summary>
         /// <param name="label">The label to display for the property</param>
         void DrawPropertyLayout(GUIContent label);
     }
     
     /// <summary>
-    /// Base class containing shared utilities for TypeRef drawer implementations.
+    /// Base class containing shared utilities for SerializedType drawer implementations.
     /// </summary>
-    internal abstract class TypeRefDrawerBase<TBase> where TBase : class {
+    internal abstract class SerializedTypeDrawerBase<TBase> where TBase : class {
         protected readonly InspectorProperty Property;
-        protected readonly PropertyValueEntry<TypeRef<TBase>> ValueEntry;
-        protected readonly TypeRefOptionsAttribute? Options;
+        protected readonly PropertyValueEntry<SerializedType<TBase>> ValueEntry;
+        protected readonly SerializedTypeOptionsAttribute? Options;
         protected readonly List<Type> AvailableTypes;
         
-        protected TypeRefDrawerBase(
+        protected SerializedTypeDrawerBase(
             InspectorProperty property,
-            PropertyValueEntry<TypeRef<TBase>> valueEntry,
-            TypeRefOptionsAttribute? options,
+            PropertyValueEntry<SerializedType<TBase>> valueEntry,
+            SerializedTypeOptionsAttribute? options,
             List<Type> availableTypes) {
             Property = property;
             ValueEntry = valueEntry;

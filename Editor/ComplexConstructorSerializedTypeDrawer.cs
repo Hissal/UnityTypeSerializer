@@ -9,20 +9,20 @@ using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
-    /// Complex constructor drawer for TypeRef that provides a detailed UI for constructing generic types.
+    /// Complex constructor drawer for SerializedType that provides a detailed UI for constructing generic types.
     /// This drawer shows a full constructor interface with nested generic type support.
     /// </summary>
-    internal sealed class ComplexConstructorTypeRefDrawer<TBase> : TypeRefDrawerBase<TBase>, ITypeRefDrawerImplementation 
+    internal sealed class ComplexConstructorSerializedTypeDrawer<TBase> : SerializedTypeDrawerBase<TBase>, ISerializedTypeDrawerImplementation 
         where TBase : class {
         
         Type[]? selectedTypeArguments;
         GenericConstructionState? constructionState;
         readonly List<GenericSelectorItem<Type>> dropdownItems;
         
-        public ComplexConstructorTypeRefDrawer(
+        public ComplexConstructorSerializedTypeDrawer(
             InspectorProperty property,
-            PropertyValueEntry<TypeRef<TBase>> valueEntry,
-            TypeRefOptionsAttribute? options,
+            PropertyValueEntry<SerializedType<TBase>> valueEntry,
+            SerializedTypeOptionsAttribute? options,
             List<Type> availableTypes) 
             : base(property, valueEntry, options, availableTypes) {
             
@@ -65,29 +65,29 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     if (selectedType != null && selectedType.IsGenericTypeDefinition) {
                         if (allowOpenGenerics && !allowGenericTypeConstruction) {
                             // When only AllowOpenGenerics is true (no construction), immediately assign the open generic
-                            ValueEntry.SmartValue = new TypeRef<TBase> { Type = selectedType };
+                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
                             selectedTypeArguments = null;
                         }
                         else if (!allowOpenGenerics && allowGenericTypeConstruction) {
                             // When only AllowGenericTypeConstruction is true (no open generics), force construction
-                            ValueEntry.SmartValue = new TypeRef<TBase> { Type = selectedType };
+                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
                             var argCount = selectedType.GetGenericArguments().Length;
                             selectedTypeArguments = new Type[argCount];
                         }
                         else if (allowOpenGenerics && allowGenericTypeConstruction) {
                             // When both are true, assign the open generic (construct button will appear)
-                            ValueEntry.SmartValue = new TypeRef<TBase> { Type = selectedType };
+                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
                             selectedTypeArguments = null;
                         }
                         else {
                             // Neither option is enabled - this shouldn't happen
-                            ValueEntry.SmartValue = new TypeRef<TBase> { Type = null };
+                            ValueEntry.SmartValue = new SerializedType<TBase> { Type = null };
                             selectedTypeArguments = null;
                         }
                     }
                     else {
                         // Concrete type selected
-                        ValueEntry.SmartValue = new TypeRef<TBase> { Type = selectedType };
+                        ValueEntry.SmartValue = new SerializedType<TBase> { Type = selectedType };
                         selectedTypeArguments = null;
                     }
                     ValueEntry.ApplyChanges();
@@ -190,7 +190,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
                 else {
                     // Clear the type entirely when open generics aren't allowed
-                    ValueEntry.SmartValue = new TypeRef<TBase> { Type = null };
+                    ValueEntry.SmartValue = new SerializedType<TBase> { Type = null };
                     ValueEntry.ApplyChanges();
                 }
                 
@@ -396,7 +396,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 
                 // All arguments are selected - construct the type
                 var constructedType = openGenericType.MakeGenericType(processedArgs.Cast<Type>().ToArray());
-                ValueEntry.SmartValue = new TypeRef<TBase> { Type = constructedType };
+                ValueEntry.SmartValue = new SerializedType<TBase> { Type = constructedType };
                 ValueEntry.ApplyChanges();
                 selectedTypeArguments = null;
                 constructionState = null;
@@ -456,7 +456,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (isNested) {
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Space(15);
-                EditorGUILayout.BeginVertical(TypeRefDrawerStyles.MinimalVertical);
+                EditorGUILayout.BeginVertical(SerializedTypeDrawerStyles.MinimalVertical);
                 
                 // Draw the label and repick button on the same line
                 EditorGUILayout.BeginHorizontal();
@@ -495,7 +495,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 GUI.backgroundColor = new Color(0.7f, 0.7f, 0.7f, 0.5f);
                 if (GUILayout.Button("⟲", GUILayout.Width(20), GUILayout.Height(14))) {
                     // Clear the entire construction and reset to allow repicking the root type
-                    ValueEntry.SmartValue = new TypeRef<TBase> { Type = null };
+                    ValueEntry.SmartValue = new SerializedType<TBase> { Type = null };
                     ValueEntry.ApplyChanges();
                     
                     // Clear all construction state including nested paths
@@ -925,7 +925,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
     }
     
-    static class TypeRefDrawerStyles {
+    static class SerializedTypeDrawerStyles {
         static GUIStyle? s_minimalVertical;
         
         public static GUIStyle MinimalVertical {

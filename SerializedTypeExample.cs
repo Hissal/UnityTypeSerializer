@@ -4,93 +4,93 @@ using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer {
     /// <summary>
-    /// Comprehensive test cases for TypeRef with nested generic type construction.
+    /// Comprehensive test cases for SerializedType with nested generic type construction.
     /// Demonstrates various scenarios including deep nesting, multiple constraints, and real-world patterns.
     /// </summary>
-    public sealed class TypeRefExample : MonoBehaviour {
-        [Title("TypeRef Examples & Tests", bold: true)]
-        [InfoBox("This script demonstrates TypeRef capabilities with various test scenarios.\n" +
+    public sealed class SerializedTypeExample : MonoBehaviour {
+        [Title("SerializedType Examples & Tests", bold: true)]
+        [InfoBox("This script demonstrates SerializedType capabilities with various test scenarios.\n" +
                  "Use the button below to log type information for all configured fields.")]
         
         [Title("Drawer Mode Tests", bold: true)]
         [InfoBox("Inline Mode (Default) - Single line with multiple dropdowns\n" +
                  "This is the new default drawer mode.")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true)]
-        TypeRef<ITypeRefExample>? inlineModeDefault;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<ISerializedTypeExample>? inlineModeDefault;
         
         [InfoBox("Complex Constructor Mode (Opt-in) - Step-by-step nested UI\n" +
                  "Use UseComplexConstructor = true to enable the original complex constructor.")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true, useComplexConstructor: true)]
-        TypeRef<ITypeRefExample>? complexConstructorMode;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true, useComplexConstructor: true)]
+        SerializedType<ISerializedTypeExample>? complexConstructorMode;
         
         [Title("Basic Options", bold: true)]
         [InfoBox("Default behavior - only concrete types are shown.")]
         [SerializeField]
-        TypeRef<ITypeRefExample>? concreteOnly;
+        SerializedType<ISerializedTypeExample>? concreteOnly;
 
         [InfoBox("AllowGenericTypeConstruction = true\n" +
                  "Shows generic types in dropdown. Selection forces immediate construction (no open generics allowed).")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true)]
-        TypeRef<ITypeRefExample>? constructionRequired;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<ISerializedTypeExample>? constructionRequired;
 
         [InfoBox("AllowOpenGenerics = true\n" +
                  "Shows generic types but allows selecting them WITHOUT construction (e.g., List<>).")]
         [SerializeField]
-        [TypeRefOptions(allowOpenGenerics: true)]
-        TypeRef<ITypeRefExample>? openGenericsAllowed;
+        [SerializedTypeOptions(allowOpenGenerics: true)]
+        SerializedType<ISerializedTypeExample>? openGenericsAllowed;
 
         [InfoBox("Both AllowGenericTypeConstruction and AllowOpenGenerics = true\n" +
                  "Selecting a generic type assigns it immediately, but a '▶ Construct' button appears to optionally construct it.")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true, allowOpenGenerics: true)]
-        TypeRef<ITypeRefExample>? optionalConstruction;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true, allowOpenGenerics: true)]
+        SerializedType<ISerializedTypeExample>? optionalConstruction;
 
         [Title("Self-Nesting Option", bold: true)]
         [InfoBox("AllowSelfNesting = false (default)\n" +
                  "Prevents recursive nesting like Wrapper<Wrapper<Wrapper<...>>>")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true)]
-        TypeRef<ITypeRefExample>? noSelfNesting;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<ISerializedTypeExample>? noSelfNesting;
 
         [InfoBox("AllowSelfNesting = true\n" +
                  "Allows recursive nesting like Wrapper<Wrapper<int>>")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true, allowSelfNesting: true)]
-        TypeRef<ITypeRefExample>? selfNestingAllowed;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true, allowSelfNesting: true)]
+        SerializedType<ISerializedTypeExample>? selfNestingAllowed;
 
         [Title("Complex Nested Examples", bold: true)]
         [InfoBox("Deeply nested generic construction test")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true)]
-        TypeRef<ITypeRefExample>? deeplyNested;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<ISerializedTypeExample>? deeplyNested;
 
         [InfoBox("Extreme nesting with multiple parameters at each level")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true, allowSelfNesting: true)]
-        TypeRef<ITypeRefExample>? extremeNesting;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true, allowSelfNesting: true)]
+        SerializedType<ISerializedTypeExample>? extremeNesting;
 
         [Title("Real-World Scenarios", bold: true)]
         [InfoBox("Damage effect system - supports elemental damage with nested types")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true)]
-        TypeRef<IDamageEffect>? damageEffect;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IDamageEffect>? damageEffect;
 
         [InfoBox("Repository pattern - generic data storage")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true)]
-        TypeRef<IRepository>? repository;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IRepository>? repository;
 
         [InfoBox("Strategy pattern - pluggable algorithms")]
         [SerializeField]
-        [TypeRefOptions(allowGenericTypeConstruction: true)]
-        TypeRef<IStrategy>? strategy;
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IStrategy>? strategy;
 
         [Button("Log All Type Infos", ButtonSizes.Large), GUIColor(0.4f, 0.8f, 1f)]
         void LogAllTypeInfos() {
-            Debug.Log("=== TypeRef Test Cases - Type Information ===\n");
+            Debug.Log("=== SerializedType Test Cases - Type Information ===\n");
             
             LogTypeInfo("Inline Mode (Default)", inlineModeDefault);
             LogTypeInfo("Complex Constructor Mode", complexConstructorMode);
@@ -109,13 +109,13 @@ namespace Hissal.UnityTypeSerializer {
             Debug.Log("\n=== End of Type Information ===");
         }
 
-        void LogTypeInfo<T>(string testName, TypeRef<T>? typeRef) where T : class {
-            if (typeRef?.HasType != true) {
+        void LogTypeInfo<T>(string testName, SerializedType<T>? serializedType) where T : class {
+            if (serializedType?.HasType != true) {
                 Debug.Log($"[{testName}] No type selected");
                 return;
             }
 
-            var type = typeRef.Type;
+            var type = serializedType.Type;
             var typeDescription = type.IsGenericTypeDefinition 
                 ? $"{GetFullTypeName(type)} (OPEN GENERIC)" 
                 : GetFullTypeName(type);
@@ -161,10 +161,10 @@ namespace Hissal.UnityTypeSerializer {
     // ============================================================================
     
     /// <summary>
-    /// Marker interface for TypeRef example types.
-    /// Used for basic testing of TypeRef functionality.
+    /// Marker interface for SerializedType example types.
+    /// Used for basic testing of SerializedType functionality.
     /// </summary>
-    public interface ITypeRefExample { }
+    public interface ISerializedTypeExample { }
     
     // Real-world pattern interfaces
     public interface IDamageEffect { }
@@ -180,71 +180,71 @@ namespace Hissal.UnityTypeSerializer {
     // BASIC TEST TYPES - Concrete implementations
     // ============================================================================
     
-    public sealed class BasicExample : ITypeRefExample { }
-    public sealed class AdvancedExample : ITypeRefExample { }
-    public sealed class ConcreteExample : ITypeRefExample { }
-    public sealed class SimpleType : ITypeRefExample { }
+    public sealed class BasicExample : ISerializedTypeExample { }
+    public sealed class AdvancedExample : ISerializedTypeExample { }
+    public sealed class ConcreteExample : ISerializedTypeExample { }
+    public sealed class SimpleType : ISerializedTypeExample { }
 
     // ============================================================================
     // GENERIC TEST TYPES - Single parameter
     // ============================================================================
     
-    public sealed class GenericExample<T> : ITypeRefExample 
-        where T : ITypeRefExample 
+    public sealed class GenericExample<T> : ISerializedTypeExample 
+        where T : ISerializedTypeExample 
     { }
     
-    public sealed class Container<T> : ITypeRefExample 
-        where T : ITypeRefExample 
+    public sealed class Container<T> : ISerializedTypeExample 
+        where T : ISerializedTypeExample 
     { }
     
-    public sealed class Wrapper<T> : ITypeRefExample 
-        where T : ITypeRefExample 
+    public sealed class Wrapper<T> : ISerializedTypeExample 
+        where T : ISerializedTypeExample 
     { }
     
-    public sealed class Holder<T> : ITypeRefExample 
-        where T : ITypeRefExample 
+    public sealed class Holder<T> : ISerializedTypeExample 
+        where T : ISerializedTypeExample 
     { }
 
     // ============================================================================
     // MULTI-PARAMETER GENERIC TYPES
     // ============================================================================
     
-    public sealed class Pair<T1, T2> : ITypeRefExample 
-        where T1 : ITypeRefExample 
-        where T2 : ITypeRefExample 
+    public sealed class Pair<T1, T2> : ISerializedTypeExample 
+        where T1 : ISerializedTypeExample 
+        where T2 : ISerializedTypeExample 
     { }
     
-    public sealed class Triplet<T1, T2, T3> : ITypeRefExample 
-        where T1 : ITypeRefExample 
-        where T2 : ITypeRefExample 
-        where T3 : ITypeRefExample 
+    public sealed class Triplet<T1, T2, T3> : ISerializedTypeExample 
+        where T1 : ISerializedTypeExample 
+        where T2 : ISerializedTypeExample 
+        where T3 : ISerializedTypeExample 
     { }
     
-    public sealed class MegaWrapper<T1, T2, T3, T4, T5> : ITypeRefExample 
-        where T1 : ITypeRefExample 
-        where T2 : ITypeRefExample 
-        where T3 : ITypeRefExample 
-        where T4 : ITypeRefExample 
-        where T5 : ITypeRefExample 
+    public sealed class MegaWrapper<T1, T2, T3, T4, T5> : ISerializedTypeExample 
+        where T1 : ISerializedTypeExample 
+        where T2 : ISerializedTypeExample 
+        where T3 : ISerializedTypeExample 
+        where T4 : ISerializedTypeExample 
+        where T5 : ISerializedTypeExample 
     { }
     
-    public sealed class MegaWrapper2<T1, T2> : ITypeRefExample 
-        where T1 : ITypeRefExample 
-        where T2 : ITypeRefExample 
+    public sealed class MegaWrapper2<T1, T2> : ISerializedTypeExample 
+        where T1 : ISerializedTypeExample 
+        where T2 : ISerializedTypeExample 
     { }
     
-    public sealed class MegaWrapper3<T1, T2, T3> : ITypeRefExample 
-        where T1 : ITypeRefExample 
-        where T2 : ITypeRefExample 
-        where T3 : ITypeRefExample 
+    public sealed class MegaWrapper3<T1, T2, T3> : ISerializedTypeExample 
+        where T1 : ISerializedTypeExample 
+        where T2 : ISerializedTypeExample 
+        where T3 : ISerializedTypeExample 
     { }
     
-    public sealed class MegaWrapper5<T1, T2, T3, T4, T5> : ITypeRefExample 
-        where T1 : ITypeRefExample 
-        where T2 : ITypeRefExample 
-        where T3 : ITypeRefExample 
-        where T4 : ITypeRefExample 
-        where T5 : ITypeRefExample 
+    public sealed class MegaWrapper5<T1, T2, T3, T4, T5> : ISerializedTypeExample 
+        where T1 : ISerializedTypeExample 
+        where T2 : ISerializedTypeExample 
+        where T3 : ISerializedTypeExample 
+        where T4 : ISerializedTypeExample 
+        where T5 : ISerializedTypeExample 
     { }
 
     // ============================================================================
