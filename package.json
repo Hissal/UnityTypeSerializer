@@ -1,0 +1,8 @@
+﻿{
+  "name": "com.hissal.unitytypeserializer",
+  "version": "0.1.0",
+  "displayName": "Unity Type Serializer",
+  "description": "Internal tooling for generic type construction (requires Odin Inspector).",
+  "unity": "6000.3",
+  "author": { "name": "Hissal" }
+}

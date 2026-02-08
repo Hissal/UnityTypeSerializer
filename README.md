@@ -1,0 +1,1 @@
+﻿# Unity Type Serializer
