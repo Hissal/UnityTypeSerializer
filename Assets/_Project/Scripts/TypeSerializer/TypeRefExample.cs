@@ -12,6 +12,19 @@ namespace Hissal.TypeSerializer {
         [InfoBox("This script demonstrates TypeRef capabilities with various test scenarios.\n" +
                  "Use the button below to log type information for all configured fields.")]
         
+        [Title("Drawer Mode Tests", bold: true)]
+        [InfoBox("Inline Mode (Default) - Single line with multiple dropdowns\n" +
+                 "This is the new default drawer mode.")]
+        [SerializeField]
+        [TypeRefOptions(allowGenericTypeConstruction: true)]
+        TypeRef<ITypeRefExample>? inlineModeDefault;
+        
+        [InfoBox("Complex Constructor Mode (Opt-in) - Step-by-step nested UI\n" +
+                 "Use UseComplexConstructor = true to enable the original complex constructor.")]
+        [SerializeField]
+        [TypeRefOptions(allowGenericTypeConstruction: true, useComplexConstructor: true)]
+        TypeRef<ITypeRefExample>? complexConstructorMode;
+        
         [Title("Basic Options", bold: true)]
         [InfoBox("Default behavior - only concrete types are shown.")]
         [SerializeField]
@@ -79,6 +92,8 @@ namespace Hissal.TypeSerializer {
         void LogAllTypeInfos() {
             Debug.Log("=== TypeRef Test Cases - Type Information ===\n");
             
+            LogTypeInfo("Inline Mode (Default)", inlineModeDefault);
+            LogTypeInfo("Complex Constructor Mode", complexConstructorMode);
             LogTypeInfo("Concrete Only", concreteOnly);
             LogTypeInfo("Construction Required", constructionRequired);
             LogTypeInfo("Open Generics Allowed", openGenericsAllowed);

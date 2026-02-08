@@ -8,6 +8,14 @@ namespace Hissal.TypeSerializer {
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public sealed class TypeRefOptionsAttribute : Attribute {
         /// <summary>
+        /// Gets whether to use the complex step-by-step constructor UI for generic types.
+        /// When false (default), uses the inline one-line drawer mode with multiple dropdowns.
+        /// When true, uses the complex constructor UI with nested expandable sections.
+        /// Default is false.
+        /// </summary>
+        public bool UseComplexConstructor { get; }
+        
+        /// <summary>
         /// Gets whether generic type construction UI should be enabled.
         /// When true, allows constructing closed generic types from open generic definitions (e.g., <c>List&lt;&gt;</c> → <c>List&lt;int&gt;</c>).
         /// If <see cref="AllowOpenGenerics"/> is false, construction is mandatory before assignment.
@@ -72,13 +80,20 @@ namespace Hissal.TypeSerializer {
         /// When combined with <paramref name="allowGenericTypeConstruction"/> being true, shows an optional "Construct" button.
         /// Default is false.
         /// </param>
+        /// <param name="useComplexConstructor">
+        /// If true, uses the complex step-by-step constructor UI for generic types.
+        /// If false (default), uses the inline one-line drawer mode with multiple dropdowns.
+        /// Default is false.
+        /// </param>
         public TypeRefOptionsAttribute(
             bool allowGenericTypeConstruction = false,
             bool allowSelfNesting = false,
-            bool allowOpenGenerics = false) {
+            bool allowOpenGenerics = false,
+            bool useComplexConstructor = false) {
             AllowGenericTypeConstruction = allowGenericTypeConstruction;
             AllowSelfNesting = allowSelfNesting;
             AllowOpenGenerics = allowOpenGenerics;
+            UseComplexConstructor = useComplexConstructor;
         }
     }
 }
