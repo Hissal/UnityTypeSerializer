@@ -49,6 +49,16 @@ namespace Hissal.UnityTypeSerializer {
         public string CustomTypeFilter { get; init; } = string.Empty;
 
         /// <summary>
+        /// Candidate type must satisfy ALL of these types (AND bucket).
+        /// </summary>
+        public Type[]? InheritsOrImplementsAll { get; init; }
+
+        /// <summary>
+        /// Candidate type must satisfy AT LEAST ONE of these types (OR bucket).
+        /// </summary>
+        public Type[]? InheritsOrImplementsAny { get; init; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="SerializedTypeOptionsAttribute"/> class.
         /// </summary>
         /// <param name="allowGenericTypeConstruction">
