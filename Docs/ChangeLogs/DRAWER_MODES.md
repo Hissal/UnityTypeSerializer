@@ -79,13 +79,13 @@ The complex constructor mode provides a detailed, step-by-step UI for constructi
 
 ### Usage
 
-Enable complex constructor mode by setting `useComplexConstructor: true`:
+Enable complex constructor mode by setting `drawerMode: SerializedTypeDrawerMode.Constructor`:
 
 ```csharp
 [SerializeField]
 [SerializedTypeOptions(
     allowGenericTypeConstruction: true,
-    useComplexConstructor: true
+    drawerMode: SerializedTypeDrawerMode.Constructor
 )]
 SerializedType<IContainer> container;
 ```
@@ -99,7 +99,7 @@ SerializedType<IContainer> container;
     allowGenericTypeConstruction: true,
     allowOpenGenerics: true,
     allowSelfNesting: true,
-    useComplexConstructor: true
+    drawerMode: SerializedTypeDrawerMode.Constructor
 )]
 SerializedType<IContainer> container;
 ```
@@ -201,7 +201,7 @@ If you prefer the complex constructor UI:
 // To this:
 [SerializedTypeOptions(
     allowGenericTypeConstruction: true,
-    useComplexConstructor: true
+    drawerMode: SerializedTypeDrawerMode.Constructor
 )]
 ```
 
@@ -242,7 +242,7 @@ SerializedType<IDamageEffect> damage;
 [SerializeField]
 [SerializedTypeOptions(
     allowGenericTypeConstruction: true,
-    useComplexConstructor: true
+    drawerMode: SerializedTypeDrawerMode.Constructor
 )]
 SerializedType<IDamageEffect> damage;
 ```
@@ -276,7 +276,7 @@ public SerializedTypeOptionsAttribute(
     bool allowGenericTypeConstruction = false,
     bool allowSelfNesting = false,
     bool allowOpenGenerics = false,
-    bool useComplexConstructor = false)
+    SerializedTypeDrawerMode drawerMode = SerializedTypeDrawerMode.Inline)
 ```
 
 #### Parameters
@@ -284,7 +284,7 @@ public SerializedTypeOptionsAttribute(
 - `allowGenericTypeConstruction` - Enables generic type construction UI
 - `allowSelfNesting` - Allows recursive types like `Wrapper<Wrapper<T>>`
 - `allowOpenGenerics` - Allows open generics like `Container<T>` as final result
-- `useComplexConstructor` - **NEW**: Uses complex constructor instead of inline mode (default: false)
+- `drawerMode` - Drawer mode to use (Inline or Constructor, default: Inline)
 
 #### Properties
 
@@ -301,13 +301,13 @@ public SerializedTypeOptionsAttribute(
 [SerializedTypeOptions(allowGenericTypeConstruction: true)]
 ```
 
-### Issue: "I want the old UI back"
+### Issue: "I want to use the complex constructor UI"
 
-**Solution:** Enable complex constructor mode:
+**Solution:** Set the drawer mode to Constructor:
 ```csharp
 [SerializedTypeOptions(
     allowGenericTypeConstruction: true,
-    useComplexConstructor: true
+    drawerMode: SerializedTypeDrawerMode.Constructor
 )]
 ```
 
@@ -335,9 +335,8 @@ public SerializedTypeOptionsAttribute(
 
 ## Summary
 
-- ✅ Inline mode is the **new default** - fast and streamlined
+- ✅ Inline mode is the **default** - fast and streamlined
 - ✅ Complex constructor is **opt-in** - detailed and guided
 - ✅ Both modes respect all SerializedTypeOptions
 - ✅ Clear validation errors in both modes
-- ✅ No breaking changes - existing code works as-is
-- ✅ Set `useComplexConstructor: true` to use the old UI
+- ✅ Use `drawerMode: SerializedTypeDrawerMode.Constructor` to use the complex constructor UI
