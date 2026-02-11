@@ -88,6 +88,11 @@ namespace Hissal.UnityTypeSerializer {
         [SerializedTypeOptions(allowGenericTypeConstruction: true)]
         SerializedType<IStrategy>? strategy;
 
+        [InfoBox("Strategy pattern - pluggable algorithms")]
+        [SerializeField]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true, useComplexConstructor: true)]
+        SerializedType<IStrategy>? strategyCtorMode;
+        
         [Title("Non-Generic SerializedType (New)", bold: true)]
         [InfoBox("Non-Generic SerializedType - Accepts any type\n" +
                  "This is a convenience type equivalent to SerializedType<object>.")]
