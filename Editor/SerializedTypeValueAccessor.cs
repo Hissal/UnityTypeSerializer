@@ -70,7 +70,12 @@ namespace Hissal.UnityTypeSerializer.Editor {
         public Type? GetSelectedType() => valueEntry.SmartValue?.Type;
         
         public void SetSelectedType(Type? type) {
-            valueEntry.SmartValue = new SerializedType<TBase> { Type = type };
+            var value = valueEntry.SmartValue;
+            if (value == null) {
+                value = new SerializedType<TBase>();
+                valueEntry.SmartValue = value;
+            }
+            value.Type = type;
         }
         
         public void ApplyChanges() => valueEntry.ApplyChanges();
