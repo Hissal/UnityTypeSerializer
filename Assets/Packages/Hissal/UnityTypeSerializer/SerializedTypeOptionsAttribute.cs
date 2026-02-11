@@ -40,6 +40,13 @@ namespace Hissal.UnityTypeSerializer {
         public bool AllowOpenGenerics { get; }
 
         /// <summary>
+        /// Controls which kind of types are shown in the dropdown (concrete, abstract, interfaces).
+        /// Default is <see cref="SerializedTypeKind.Concrete"/> only (abstract + interfaces excluded).
+        /// Use bitwise flags to allow multiple kinds (e.g., <c>Concrete | Abstract</c>).
+        /// </summary>
+        public SerializedTypeKind AllowedTypeKinds { get; init; } = SerializedTypeKind.Concrete;
+
+        /// <summary>
         /// Gets or sets the name of a static or instance member (method, property, or field) that returns
         /// a <see cref="SerializedTypeFilter"/> or <see cref="System.Collections.Generic.IEnumerable{Type}"/>
         /// for controlling which types appear in the dropdown.

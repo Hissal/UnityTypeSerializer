@@ -76,16 +76,28 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 typesToFilter = typesToFilter.Where(t => !excludedTypes.Contains(t));
             }
             
+            // Get allowed type kinds from options (default to Concrete only)
+            var allowedKinds = options?.AllowedTypeKinds ?? SerializedTypeKind.Concrete;
+
             return typesToFilter
                 .Where(t => {
-                    // Always exclude abstract types and interfaces
-                    if (t.IsAbstract || t.IsInterface)
+                    // Check type kind filtering
+                    bool isInterface = t.IsInterface;
+                    bool isAbstractClass = t.IsAbstract && !isInterface;
+                    bool isConcreteClass = !t.IsAbstract && !isInterface;
+
+                    bool passesTypeKindFilter =
+                        (isConcreteClass && allowedKinds.HasFlag(SerializedTypeKind.Concrete)) ||
+                        (isAbstractClass && allowedKinds.HasFlag(SerializedTypeKind.Abstract)) ||
+                        (isInterface && allowedKinds.HasFlag(SerializedTypeKind.Interface));
+
+                    if (!passesTypeKindFilter)
                         return false;
 
                     // Check generic type definition (e.g., List<>)
                     if (t.IsGenericTypeDefinition)
                         return includeGenericTypeDefinitions;
-                    
+
                     // Regular non-generic types are always included
                     return true;
                 })

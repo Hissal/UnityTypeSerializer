@@ -56,6 +56,29 @@ namespace Hissal.UnityTypeSerializer {
             return new Type[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) };
         }
         
+        [Title("Type Kind Filtering", bold: true)]
+        [InfoBox("Default behavior - only concrete (non-abstract, non-interface) types are shown.")]
+        [SerializeField]
+        SerializedType<ISerializedTypeExample>? concreteOnlyDefault;
+
+        [InfoBox("AllowedTypeKinds = Concrete | Abstract\n" +
+                 "Shows both concrete classes and abstract classes (interfaces excluded).")]
+        [SerializeField]
+        [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.Concrete | SerializedTypeKind.Abstract)]
+        SerializedType<ISerializedTypeExample>? concreteAndAbstract;
+
+        [InfoBox("AllowedTypeKinds = Interface\n" +
+                 "Shows only interface types (concrete and abstract classes excluded).")]
+        [SerializeField]
+        [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.Interface)]
+        SerializedType<ISerializedTypeExample>? interfacesOnly;
+
+        [InfoBox("AllowedTypeKinds = Concrete | Abstract | Interface\n" +
+                 "Shows all types: concrete classes, abstract classes, and interfaces.")]
+        [SerializeField]
+        [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.Concrete | SerializedTypeKind.Abstract | SerializedTypeKind.Interface)]
+        SerializedType<ISerializedTypeExample>? allTypeKinds;
+
         [Title("Basic Options", bold: true)]
         [InfoBox("Default behavior - only concrete types are shown.")]
         [SerializeField]
