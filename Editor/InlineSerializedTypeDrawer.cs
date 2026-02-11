@@ -498,40 +498,21 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
             }
             
-            // Resolve custom filter from string-based resolver
-            var filter = SerializedTypeDrawerCore.ResolveSerializedTypeFilter(Options?.CustomTypeFilter, Property);
-            var customFilterTypes = filter.HasValue
-                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, Property)?.ToList()
-                : null;
-            
-            // Get excluded types from unified filter
-            var excludedTypes = filter.HasValue
-                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, Property)?.ToHashSet()
-                : null;
-            
-            // Start with all types from assemblies (or custom filter)
-            IEnumerable<Type> candidateTypes;
-            if (customFilterTypes != null && customFilterTypes.Any()) {
-                candidateTypes = customFilterTypes;
-            } else {
-                // get all types for generic parameter filtering
-                candidateTypes = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => {
-                        try {
-                            return a.GetTypes();
-                        } catch {
-                            return Enumerable.Empty<Type>();
-                        }
-                    });
-            }
+            // Generic argument candidates are filtered only by generic parameter constraints
+            // and generic construction rules (self-nesting prevention, etc.).
+            // CustomTypeFilter is NOT applied here — it only applies to the final assignable type list.
+            IEnumerable<Type> candidateTypes = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => {
+                    try {
+                        return a.GetTypes();
+                    } catch {
+                        return Enumerable.Empty<Type>();
+                    }
+                });
             
             return candidateTypes
                 .Where(t => !t.IsAbstract && !t.IsInterface)
                 .Where(t => {
-                    // Apply exclusion filter
-                    if (excludedTypes != null && excludedTypes.Contains(t))
-                        return false;
-                    
                     // Check self-nesting
                     if (!allowSelfNesting && t.IsGenericTypeDefinition && typesInPath.Contains(t))
                         return false;
