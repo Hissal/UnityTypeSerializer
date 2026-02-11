@@ -40,12 +40,13 @@ namespace Hissal.UnityTypeSerializer {
         public bool AllowOpenGenerics { get; }
 
         /// <summary>
-        /// Gets or sets the unified type filter for controlling which types appear in the dropdown.
-        /// Combines include and exclude filtering (both explicit types and resolver member names) into a single abstraction.
-        /// When set, this is the single source of truth for type filtering.
+        /// Gets or sets the name of a static or instance member (method, property, or field) that returns
+        /// a <see cref="SerializedTypeFilter"/> or <see cref="System.Collections.Generic.IEnumerable{Type}"/>
+        /// for controlling which types appear in the dropdown.
+        /// Supports <c>"MemberName"</c> (on the declaring/context type) or <c>"TypeName.MemberName"</c> (explicit type).
         /// </summary>
         /// <seealso cref="SerializedTypeFilter"/>
-        public SerializedTypeFilter? CustomTypeFilter { get; init; }
+        public string CustomTypeFilter { get; init; } = string.Empty;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SerializedTypeOptionsAttribute"/> class.

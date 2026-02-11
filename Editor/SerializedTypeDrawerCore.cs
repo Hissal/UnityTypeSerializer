@@ -56,8 +56,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // If either option is true, we need to show generic type definitions in the dropdown
             bool includeGenericTypeDefinitions = allowGenericTypeConstruction || allowOpenGenerics;
             
-            // Resolve custom filter types from unified filter
-            var filter = options?.CustomTypeFilter;
+            // Resolve custom filter from string-based resolver
+            var filter = ResolveSerializedTypeFilter(options?.CustomTypeFilter, property);
             var customFilterTypes = filter.HasValue
                 ? GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToList()
                 : null;
@@ -90,6 +90,77 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 })
                 .OrderBy(t => SerializedTypeDrawerUtilities.GetTypeName(t))
                 .ToList();
+        }
+        
+        /// <summary>
+        /// Resolves a string-based member name to a <see cref="SerializedTypeFilter"/>.
+        /// The member may return either a <see cref="SerializedTypeFilter"/> or an <see cref="IEnumerable{Type}"/>.
+        /// Supports <c>"MemberName"</c> (on the declaring/context type) or <c>"TypeName.MemberName"</c> (explicit type).
+        /// </summary>
+        /// <param name="resolverName">Name of a static or instance member (method, property, or field).</param>
+        /// <param name="property">The inspector property used to resolve the declaring type and instance.</param>
+        /// <returns>The resolved <see cref="SerializedTypeFilter"/>, or null if resolution fails or <paramref name="resolverName"/> is empty.</returns>
+        internal static SerializedTypeFilter? ResolveSerializedTypeFilter(
+            string? resolverName,
+            InspectorProperty property) {
+            
+            if (string.IsNullOrEmpty(resolverName))
+                return null;
+            
+            try {
+                Type? targetType = null;
+                string? targetMemberName = null;
+                object? instance = null;
+                
+                // Parse format: "TypeName.MemberName" or "MemberName"
+                var parts = resolverName!.Split('.');
+                if (parts.Length == 1) {
+                    // Just member name - search in declaring type (may be instance or static)
+                    targetType = GetDeclaringType(property);
+                    targetMemberName = parts[0];
+                    instance = GetDeclaringInstance(property);
+                }
+                else if (parts.Length == 2) {
+                    // "TypeName.MemberName" format (must be static)
+                    var typeName = parts[0];
+                    targetMemberName = parts[1];
+                    
+                    targetType = AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => {
+                            try { return a.GetTypes(); }
+                            catch { return Array.Empty<Type>(); }
+                        })
+                        .FirstOrDefault(t => t.Name == typeName || t.FullName == typeName);
+                    
+                    instance = null;
+                }
+                
+                if (targetType == null || targetMemberName == null) {
+                    Debug.LogError($"[SerializedType] Could not resolve target type for filter member '{resolverName}'");
+                    return null;
+                }
+                
+                var value = TryGetMemberValueRaw(targetType, targetMemberName, instance);
+                if (value == null) {
+                    var memberType = instance != null ? "instance" : "static";
+                    Debug.LogError($"[SerializedType] Could not find {memberType} member '{targetMemberName}' in type '{targetType.Name}' returning SerializedTypeFilter or IEnumerable<Type>");
+                    return null;
+                }
+                
+                // Evaluate return type
+                if (value is SerializedTypeFilter filter)
+                    return filter;
+                
+                if (value is IEnumerable<Type> types)
+                    return SerializedTypeFilter.Include(types.ToArray());
+                
+                Debug.LogError($"[SerializedType] Member '{resolverName}' returned unsupported type '{value.GetType().Name}'. Expected SerializedTypeFilter or IEnumerable<Type>.");
+                return null;
+            }
+            catch (Exception ex) {
+                Debug.LogError($"[SerializedType] Error resolving filter from member '{resolverName}': {ex}");
+                return null;
+            }
         }
         
         /// <summary>
@@ -221,34 +292,52 @@ namespace Hissal.UnityTypeSerializer.Editor {
         /// Supports both static and instance members.
         /// </summary>
         static IEnumerable<Type>? TryGetMemberValue(Type targetType, string memberName, object? instance = null) {
+            var raw = TryGetMemberValueRaw(targetType, memberName, instance);
+            return raw as IEnumerable<Type>;
+        }
+        
+        /// <summary>
+        /// Tries to get the raw value from a member (property, method, or field).
+        /// Supports both static and instance members. Returns the raw object for type evaluation by callers.
+        /// When an instance is provided, searches both instance and static members on the declaring type.
+        /// </summary>
+        static object? TryGetMemberValueRaw(Type targetType, string memberName, object? instance = null) {
             const BindingFlags staticFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
             const BindingFlags instanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
             
-            // Determine which binding flags to use
-            var flags = instance != null ? instanceFlags : staticFlags;
+            // When instance is provided, search both instance and static members
+            // When instance is null, only search static members
+            var flagSets = instance != null
+                ? new[] { instanceFlags, staticFlags }
+                : new[] { staticFlags };
             
-            // Try property first
-            var prop = targetType.GetProperty(memberName, flags);
-            if (prop != null && prop.CanRead) {
-                var value = prop.GetValue(instance);
-                if (value is IEnumerable<Type> enumerable)
-                    return enumerable;
-            }
-            
-            // Try method
-            var method = targetType.GetMethod(memberName, flags, null, Type.EmptyTypes, null);
-            if (method != null) {
-                var value = method.Invoke(instance, null);
-                if (value is IEnumerable<Type> enumerable)
-                    return enumerable;
-            }
-            
-            // Try field
-            var field = targetType.GetField(memberName, flags);
-            if (field != null) {
-                var value = field.GetValue(instance);
-                if (value is IEnumerable<Type> enumerable)
-                    return enumerable;
+            foreach (var flags in flagSets) {
+                var isStatic = (flags & BindingFlags.Static) != 0;
+                var invokeInstance = isStatic ? null : instance;
+                
+                // Try property
+                var prop = targetType.GetProperty(memberName, flags);
+                if (prop != null && prop.CanRead) {
+                    var value = prop.GetValue(invokeInstance);
+                    if (value is SerializedTypeFilter or IEnumerable<Type>)
+                        return value;
+                }
+                
+                // Try method
+                var method = targetType.GetMethod(memberName, flags, null, Type.EmptyTypes, null);
+                if (method != null) {
+                    var value = method.Invoke(invokeInstance, null);
+                    if (value is SerializedTypeFilter or IEnumerable<Type>)
+                        return value;
+                }
+                
+                // Try field
+                var field = targetType.GetField(memberName, flags);
+                if (field != null) {
+                    var value = field.GetValue(invokeInstance);
+                    if (value is SerializedTypeFilter or IEnumerable<Type>)
+                        return value;
+                }
             }
             
             return null;

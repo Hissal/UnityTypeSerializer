@@ -498,8 +498,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
             }
             
-            // Get custom filter types from unified filter
-            var filter = Options?.CustomTypeFilter;
+            // Resolve custom filter from string-based resolver
+            var filter = SerializedTypeDrawerCore.ResolveSerializedTypeFilter(Options?.CustomTypeFilter, Property);
             var customFilterTypes = filter.HasValue
                 ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, Property)?.ToList()
                 : null;

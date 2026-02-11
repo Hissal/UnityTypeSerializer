@@ -700,8 +700,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
             bool allowSelfNesting = Options?.AllowSelfNesting ?? false;
             bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
-            // Resolve custom filter types from unified filter
-            var filter = Options?.CustomTypeFilter;
+            // Resolve custom filter from string-based resolver
+            var filter = SerializedTypeDrawerCore.ResolveSerializedTypeFilter(Options?.CustomTypeFilter, Property);
             var customFilterTypes = filter.HasValue
                 ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, Property)?.ToList()
                 : null;
