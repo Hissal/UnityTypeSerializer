@@ -150,10 +150,7 @@ Both drawer modes respect all SerializedTypeOptions:
 | `AllowGenericTypeConstruction` | ✅ Inline dropdowns | ✅ Nested UI |
 | `AllowOpenGenerics` | ✅ Validation + errors | ✅ Visual feedback |
 | `AllowSelfNesting` | ✅ Filter types | ✅ Filter types |
-| `ExcludeTypes` | ✅ | ✅ |
-| `IncludeTypes` | ✅ | ✅ |
-| `ExcludeTypesResolver` | ✅ | ✅ |
-| `IncludeTypesResolver` | ✅ | ✅ |
+| `CustomTypeFilter` | ✅ | ✅ |
 
 ---
 
@@ -291,10 +288,7 @@ public SerializedTypeOptionsAttribute(
 
 #### Properties
 
-- `ExcludeTypes` - Types to exclude from dropdown
-- `ExcludeTypesResolver` - Method/property that returns types to exclude
-- `IncludeTypes` - Only these types appear in dropdown
-- `IncludeTypesResolver` - Method/property that returns types to include
+- `CustomTypeFilter` - Unified type filter (include/exclude types and resolvers via `SerializedTypeFilter`)
 
 ---
 

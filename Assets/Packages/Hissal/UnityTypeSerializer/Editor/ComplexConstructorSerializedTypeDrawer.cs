@@ -700,19 +700,16 @@ namespace Hissal.UnityTypeSerializer.Editor {
             bool allowSelfNesting = Options?.AllowSelfNesting ?? false;
             bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
-            // Resolve custom filter types if any
-            var customFilterTypes = SerializedTypeDrawerCore.GetFilteredTypes(
-                Options?.IncludeTypes,
-                Options?.IncludeTypesResolver,
-                Property
-            )?.ToList();
+            // Resolve custom filter types from unified filter
+            var filter = Options?.CustomTypeFilter;
+            var customFilterTypes = filter.HasValue
+                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, Property)?.ToList()
+                : null;
             
-            // Resolve excluded types if any
-            var excludedTypes = SerializedTypeDrawerCore.GetFilteredTypes(
-                Options?.ExcludeTypes,
-                Options?.ExcludeTypesResolver,
-                Property
-            )?.ToHashSet();
+            // Resolve excluded types from unified filter
+            var excludedTypes = filter.HasValue
+                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, Property)?.ToHashSet()
+                : null;
             
             // Build chain of parent generic types for self-nesting check
             var parentGenericTypes = new HashSet<Type>();

@@ -43,7 +43,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         
         /// <summary>
         /// Builds the available types list for a SerializedType property.
-        /// Uses the accessor's base constraint and the options' include/exclude filters.
+        /// Uses the accessor's base constraint and the options' <see cref="SerializedTypeFilter"/> for filtering.
         /// </summary>
         public static List<Type> RefreshAvailableTypes(
             Type baseConstraint,
@@ -56,19 +56,16 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // If either option is true, we need to show generic type definitions in the dropdown
             bool includeGenericTypeDefinitions = allowGenericTypeConstruction || allowOpenGenerics;
             
-            // Resolve custom filter types if any
-            var customFilterTypes = GetFilteredTypes(
-                options?.IncludeTypes,
-                options?.IncludeTypesResolver,
-                property
-            )?.ToList();
+            // Resolve custom filter types from unified filter
+            var filter = options?.CustomTypeFilter;
+            var customFilterTypes = filter.HasValue
+                ? GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToList()
+                : null;
             
-            // Resolve excluded types if any
-            var excludedTypes = GetFilteredTypes(
-                options?.ExcludeTypes,
-                options?.ExcludeTypesResolver,
-                property
-            )?.ToHashSet();
+            // Resolve excluded types from unified filter
+            var excludedTypes = filter.HasValue
+                ? GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, property)?.ToHashSet()
+                : null;
             
             IEnumerable<Type> typesToFilter = (customFilterTypes != null && customFilterTypes.Any())
                 ? customFilterTypes

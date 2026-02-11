@@ -36,22 +36,23 @@ The `SerializedType<TBase>` system provides a powerful way to select and constru
 
 ### 6. **Type Filtering**
 
-#### Exclusion Filters
+#### Unified Filtering via `SerializedTypeFilter`
 ```csharp
 // Exclude specific types
-[SerializedTypeOptions(ExcludeTypes = new[] { typeof(FireDamage), typeof(IceDamage) })]
+[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
+    ExcludeTypes = new[] { typeof(FireDamage), typeof(IceDamage) }))]
 
 // Exclude via resolver method
-[SerializedTypeOptions(ExcludeTypesResolver = "TypeName.MethodName")]
-```
+[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
+    ExcludeResolver = "TypeName.MethodName"))]
 
-#### Inclusion Filters
-```csharp
 // Only show specific types
-[SerializedTypeOptions(IncludeTypes = new[] { typeof(FireDamage), typeof(IceDamage) })]
+[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
+    IncludeTypes = new[] { typeof(FireDamage), typeof(IceDamage) }))]
 
 // Include via resolver method
-[SerializedTypeOptions(IncludeTypesResolver = "TypeName.MethodName")]
+[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
+    IncludeResolver = "TypeName.MethodName"))]
 ```
 
 **Note**: Inclusion filters take precedence over normal base type filtering.
@@ -67,7 +68,8 @@ public static IEnumerable<Type> GetElementalTypes() {
     // ...
 }
 
-[SerializedTypeOptions(ExcludeTypesResolver = "MyClass.GetElementalTypes")]
+[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
+    ExcludeResolver = "MyClass.GetElementalTypes"))]
 SerializedType<IDamageEffect> myField;
 ```
 
@@ -152,7 +154,8 @@ SerializedType<IPlugin> pluginType;
 ```csharp
 [SerializedTypeOptions(
     includeGenericTypeDefinitions: true,
-    ExcludeTypes = new[] { typeof(DeprecatedDamage) }
+    CustomTypeFilter = new SerializedTypeFilter(
+        ExcludeTypes = new[] { typeof(DeprecatedDamage) })
 )]
 SerializedType<IDamageEffect> damageType;
 ```
@@ -170,7 +173,8 @@ SerializedType<IFactory> factoryType;
 ```csharp
 [SerializedTypeOptions(
     includeGenericTypeDefinitions: true,
-    IncludeTypesResolver = "GetContainerTypes"
+    CustomTypeFilter = new SerializedTypeFilter(
+        IncludeResolver = "GetContainerTypes")
 )]
 SerializedType<IDataContainer> containerType;
 ```
