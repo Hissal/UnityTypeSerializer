@@ -16,22 +16,22 @@ namespace Hissal.UnityTypeSerializer {
         
         [Title("Drawer Mode Tests", bold: true)]
         [InfoBox("Inline Mode (Default) - Single line with multiple dropdowns\n" +
-                 "This is the new default drawer mode.")]
+                 "This is the default drawer mode.")]
         [SerializeField]
         [SerializedTypeOptions(allowGenericTypeConstruction: true)]
         SerializedType<ISerializedTypeExample>? inlineModeDefault;
         
-        [InfoBox("Complex Constructor Mode (Opt-in) - Step-by-step nested UI\n" +
-                 "Use UseComplexConstructor = true to enable the original complex constructor.")]
+        [InfoBox("Complex Constructor Mode - Step-by-step nested UI\n" +
+                 "Use drawerMode parameter to specify the complex constructor.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true, useComplexConstructor: true)]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true, drawerMode: SerializedTypeDrawerMode.Constructor)]
         SerializedType<ISerializedTypeExample>? complexConstructorMode;
+        
         
         [Title("Custom Filtering", bold: true)]
         [SerializeField]
         [SerializedTypeOptions(
             allowGenericTypeConstruction: true,
-            useComplexConstructor: true,
             CustomTypeFilter = nameof(GetCustomIncludeTypes))]
         SerializedType<ISerializedTypeExample>? customFilteredAnyType;
         
@@ -144,7 +144,7 @@ namespace Hissal.UnityTypeSerializer {
 
         [InfoBox("Strategy pattern - pluggable algorithms")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true, useComplexConstructor: true)]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true, drawerMode: SerializedTypeDrawerMode.Constructor)]
         SerializedType<IStrategy>? strategyCtorMode;
         
         [Title("Non-Generic SerializedType (New)", bold: true)]

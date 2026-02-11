@@ -8,12 +8,10 @@ namespace Hissal.UnityTypeSerializer {
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public sealed class SerializedTypeOptionsAttribute : Attribute {
         /// <summary>
-        /// Gets whether to use the complex step-by-step constructor UI for generic types.
-        /// When false (default), uses the inline one-line drawer mode with multiple dropdowns.
-        /// When true, uses the complex constructor UI with nested expandable sections.
-        /// Default is false.
+        /// Gets the drawer mode to use for displaying and editing the SerializedType field.
+        /// Default is <see cref="SerializedTypeDrawerMode.Inline"/>.
         /// </summary>
-        public bool UseComplexConstructor { get; }
+        public SerializedTypeDrawerMode DrawerMode { get; }
         
         /// <summary>
         /// Gets whether generic type construction UI should be enabled.
@@ -82,20 +80,19 @@ namespace Hissal.UnityTypeSerializer {
         /// When combined with <paramref name="allowGenericTypeConstruction"/> being true, shows an optional "Construct" button.
         /// Default is false.
         /// </param>
-        /// <param name="useComplexConstructor">
-        /// If true, uses the complex step-by-step constructor UI for generic types.
-        /// If false (default), uses the inline one-line drawer mode with multiple dropdowns.
-        /// Default is false.
+        /// <param name="drawerMode">
+        /// The drawer mode to use for displaying the SerializedType field.
+        /// Default is <see cref="SerializedTypeDrawerMode.Inline"/>.
         /// </param>
         public SerializedTypeOptionsAttribute(
             bool allowGenericTypeConstruction = false,
             bool allowSelfNesting = false,
             bool allowOpenGenerics = false,
-            bool useComplexConstructor = false) {
+            SerializedTypeDrawerMode drawerMode = SerializedTypeDrawerMode.Inline) {
             AllowGenericTypeConstruction = allowGenericTypeConstruction;
             AllowSelfNesting = allowSelfNesting;
             AllowOpenGenerics = allowOpenGenerics;
-            UseComplexConstructor = useComplexConstructor;
+            DrawerMode = drawerMode;
         }
     }
 }

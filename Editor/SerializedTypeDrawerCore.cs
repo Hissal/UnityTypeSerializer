@@ -5,6 +5,7 @@ using System.Reflection;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
+using Hissal.UnityTypeSerializer;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
@@ -22,9 +23,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
             SerializedTypeOptionsAttribute? options,
             List<Type> availableTypes) {
             
-            bool useComplexConstructor = options?.UseComplexConstructor ?? false;
+            var drawerMode = options?.DrawerMode ?? SerializedTypeDrawerMode.Inline;
             
-            if (useComplexConstructor) {
+            if (drawerMode == SerializedTypeDrawerMode.Constructor) {
                 return new ComplexConstructorSerializedTypeDrawer(
                     property,
                     accessor,
