@@ -40,28 +40,12 @@ namespace Hissal.UnityTypeSerializer {
         public bool AllowOpenGenerics { get; }
 
         /// <summary>
-        /// Gets the types to exclude from the dropdown. These types will never appear in the selection list.
+        /// Gets or sets the unified type filter for controlling which types appear in the dropdown.
+        /// Combines include and exclude filtering (both explicit types and resolver member names) into a single abstraction.
+        /// When set, this is the single source of truth for type filtering.
         /// </summary>
-        public Type[]? ExcludeTypes { get; init; }
-
-        /// <summary>
-        /// Gets the name of a method or property that returns an IEnumerable&lt;Type&gt; to exclude.
-        /// The member should be static and parameterless. Can be in format "TypeName.MemberName" or just "MemberName" for current class.
-        /// </summary>
-        public string? ExcludeTypesResolver { get; init; }
-
-        /// <summary>
-        /// Gets the custom filter types. When set, only these types (and their derived types if base type constraints apply) will appear.
-        /// Takes precedence over normal type filtering based on TBase constraint.
-        /// </summary>
-        public Type[]? IncludeTypes { get; init; }
-
-        /// <summary>
-        /// Gets the name of a method or property that returns an IEnumerable&lt;Type&gt; for custom filtering.
-        /// The member should be static and parameterless. Can be in format "TypeName.MemberName" or just "MemberName" for current class.
-        /// When set, only these types will appear in the dropdown.
-        /// </summary>
-        public string? IncludeTypesResolver { get; init; }
+        /// <seealso cref="SerializedTypeFilter"/>
+        public SerializedTypeFilter? CustomTypeFilter { get; init; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SerializedTypeOptionsAttribute"/> class.

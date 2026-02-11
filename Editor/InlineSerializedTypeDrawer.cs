@@ -498,19 +498,16 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
             }
             
-            // Get custom filter types if specified
-            var customFilterTypes = SerializedTypeDrawerCore.GetFilteredTypes(
-                Options?.IncludeTypes,
-                Options?.IncludeTypesResolver,
-                Property
-            )?.ToList();
+            // Get custom filter types from unified filter
+            var filter = Options?.CustomTypeFilter;
+            var customFilterTypes = filter.HasValue
+                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, Property)?.ToList()
+                : null;
             
-            // Get excluded types if specified
-            var excludedTypes = SerializedTypeDrawerCore.GetFilteredTypes(
-                Options?.ExcludeTypes,
-                Options?.ExcludeTypesResolver,
-                Property
-            )?.ToHashSet();
+            // Get excluded types from unified filter
+            var excludedTypes = filter.HasValue
+                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, Property)?.ToHashSet()
+                : null;
             
             // Start with all types from assemblies (or custom filter)
             IEnumerable<Type> candidateTypes;

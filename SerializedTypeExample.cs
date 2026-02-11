@@ -32,10 +32,13 @@ namespace Hissal.UnityTypeSerializer {
         [SerializedTypeOptions(
             allowGenericTypeConstruction: true,
             useComplexConstructor: true,
-            IncludeTypesResolver = nameof(GetCustomIncludeTypes)
-            //IncludeTypes = new Type[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample), typeof(ChainedStrategy<,>) }
-            //ExcludeTypes = new Type[] { typeof(SimpleType) }
-            //ExcludeTypesResolver = nameof(GetCustomExcludeTypes)
+            CustomTypeFilter = new SerializedTypeFilter(IncludeResolver = nameof(GetCustomIncludeTypes))
+            //CustomTypeFilter = new SerializedTypeFilter(
+            //    IncludeTypes = new Type[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample), typeof(ChainedStrategy<,>) })
+            //CustomTypeFilter = new SerializedTypeFilter(
+            //    ExcludeTypes = new Type[] { typeof(SimpleType) })
+            //CustomTypeFilter = new SerializedTypeFilter(
+            //    ExcludeResolver = nameof(GetCustomExcludeTypes))
             )]
         SerializedType<ISerializedTypeExample>? customFilteredAnyType;
         
@@ -130,10 +133,11 @@ namespace Hissal.UnityTypeSerializer {
         [SerializeField]
         SerializedType? anyType;
 
-        [InfoBox("Non-Generic with IncludeTypes filter\n" +
-                 "Only shows specific types via IncludeTypes attribute property.")]
+        [InfoBox("Non-Generic with CustomTypeFilter\n" +
+                 "Only shows specific types via CustomTypeFilter attribute property.")]
         [SerializeField]
-        [SerializedTypeOptions(IncludeTypes = new[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) })]
+        [SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
+            IncludeTypes = new[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) }))]
         SerializedType? filteredAnyType;
 
         [InfoBox("Non-Generic with generic construction enabled\n" +
