@@ -491,42 +491,64 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (!allowSelfNesting) {
                 var currentType = Accessor.GetSelectedType();
                 if (currentType != null) {
-                    // Build the effective current type including construction state
-                    var effectiveType = BuildTypeFromConstructionState(currentType);
+                    // Use the effective type that incorporates constructionState so that
+                    // self-nesting detection also works for partially-constructed selections.
+                    var effectiveType = BuildTypeFromConstructionState(currentType) ?? currentType;
                     CollectTypesInPath(effectiveType, path, typesInPath);
                 }
             }
             
-            return AvailableTypes.Where(t => {
-                // Check self-nesting against all types in the path
-                if (!allowSelfNesting && typesInPath.Count > 0) {
-                    if (t.IsGenericType || t.IsGenericTypeDefinition) {
-                        var tDef = t.IsGenericTypeDefinition ? t : t.GetGenericTypeDefinition();
-                        if (typesInPath.Contains(tDef)) {
-                            return false;
+            // Get custom filter types if specified
+            var customFilterTypes = SerializedTypeDrawerCore.GetFilteredTypes(
+                Options?.IncludeTypes,
+                Options?.IncludeTypesResolver,
+                Property
+            )?.ToList();
+            
+            // Get excluded types if specified
+            var excludedTypes = SerializedTypeDrawerCore.GetFilteredTypes(
+                Options?.ExcludeTypes,
+                Options?.ExcludeTypesResolver,
+                Property
+            )?.ToHashSet();
+            
+            // Start with all types from assemblies (or custom filter)
+            IEnumerable<Type> candidateTypes;
+            if (customFilterTypes != null && customFilterTypes.Any()) {
+                candidateTypes = customFilterTypes;
+            } else {
+                // get all types for generic parameter filtering
+                candidateTypes = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => {
+                        try {
+                            return a.GetTypes();
+                        } catch {
+                            return Enumerable.Empty<Type>();
                         }
-                    }
-                }
-                
-                // Check constraints
-                foreach (var constraint in constraints) {
-                    if (!constraint.IsAssignableFrom(t)) {
-                        // For generic constraints, check if t implements the generic interface
-                        if (constraint.IsGenericType && t.IsGenericType) {
-                            var constraintDef = constraint.GetGenericTypeDefinition();
-                            var interfaces = t.GetInterfaces();
-                            bool implements = interfaces.Any(i => 
-                                i.IsGenericType && i.GetGenericTypeDefinition() == constraintDef);
-                            if (!implements)
-                                return false;
-                        } else {
+                    });
+            }
+            
+            return candidateTypes
+                .Where(t => !t.IsAbstract && !t.IsInterface)
+                .Where(t => {
+                    // Apply exclusion filter
+                    if (excludedTypes != null && excludedTypes.Contains(t))
+                        return false;
+                    
+                    // Check self-nesting
+                    if (!allowSelfNesting && t.IsGenericTypeDefinition && typesInPath.Contains(t))
+                        return false;
+                    
+                    // Check all constraints
+                    foreach (var constraint in constraints) {
+                        if (!constraint.IsAssignableFrom(t))
                             return false;
-                        }
                     }
-                }
-                
-                return true;
-            }).ToList();
+                    
+                    return true;
+                })
+                .OrderBy(t => GetTypeName(t))
+                .ToList();
         }
         
         Type BuildTypeFromConstructionState(Type type) {
