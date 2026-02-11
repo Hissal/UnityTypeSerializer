@@ -700,16 +700,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
             bool allowSelfNesting = Options?.AllowSelfNesting ?? false;
             bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
-            // Resolve custom filter from string-based resolver
-            var filter = SerializedTypeDrawerCore.ResolveSerializedTypeFilter(Options?.CustomTypeFilter, Property);
-            var customFilterTypes = filter.HasValue
-                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, Property)?.ToList()
-                : null;
-            
-            // Resolve excluded types from unified filter
-            var excludedTypes = filter.HasValue
-                ? SerializedTypeDrawerCore.GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, Property)?.ToHashSet()
-                : null;
+            // Generic argument candidates are filtered only by generic parameter constraints
+            // and generic construction rules (self-nesting prevention, etc.).
+            // CustomTypeFilter is NOT applied here — it only applies to the final assignable type list.
             
             // Build chain of parent generic types for self-nesting check
             var parentGenericTypes = new HashSet<Type>();
@@ -735,33 +728,20 @@ namespace Hissal.UnityTypeSerializer.Editor {
             }
             
             // Get all types from all assemblies
-            IEnumerable<Type> allTypes;
-            
-            if (customFilterTypes != null && customFilterTypes.Any()) {
-                // Use custom filter as base
-                allTypes = customFilterTypes;
-            }
-            else {
-                // Get all types from all assemblies
-                allTypes = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => {
-                        try {
-                            return a.GetTypes();
-                        }
-                        catch {
-                            return Enumerable.Empty<Type>();
-                        }
-                    });
-            }
+            var allTypes = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => {
+                    try {
+                        return a.GetTypes();
+                    }
+                    catch {
+                        return Enumerable.Empty<Type>();
+                    }
+                });
             
             // Filter types that satisfy the constraints
             var validTypes = allTypes
                 .Where(t => !t.IsAbstract && !t.IsInterface)
                 .Where(t => {
-                    // Apply exclusion filter
-                    if (excludedTypes != null && excludedTypes.Contains(t))
-                        return false;
-                    
                     // Check for self-nesting if not allowed
                     if (!allowSelfNesting && t.IsGenericTypeDefinition && parentGenericTypes.Contains(t))
                         return false;
