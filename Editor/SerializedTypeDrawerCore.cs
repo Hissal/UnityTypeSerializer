@@ -115,7 +115,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             
             // Add types from resolver
             if (!string.IsNullOrWhiteSpace(resolverMemberName)) {
-                var resolvedTypes = ResolveTypesFromMember(resolverMemberName, property);
+                var resolvedTypes = ResolveTypesFromMember(resolverMemberName!, property);
                 if (resolvedTypes != null) {
                     foreach (var type in resolvedTypes) {
                         if (type != null)
@@ -138,16 +138,18 @@ namespace Hissal.UnityTypeSerializer.Editor {
             try {
                 Type? targetType = null;
                 string? targetMemberName = null;
+                object? instance = null;
                 
                 // Parse format: "TypeName.MemberName" or "MemberName"
                 var parts = memberName.Split('.');
                 if (parts.Length == 1) {
-                    // Just member name - search in declaring type
-                    targetType = property.ParentType;
+                    // Just member name - search in declaring type (instance member)
+                    targetType = GetDeclaringType(property);
                     targetMemberName = parts[0];
+                    instance = GetDeclaringInstance(property);
                 }
                 else if (parts.Length == 2) {
-                    // "TypeName.MemberName" format
+                    // "TypeName.MemberName" format (static member)
                     var typeName = parts[0];
                     targetMemberName = parts[1];
                     
@@ -158,44 +160,101 @@ namespace Hissal.UnityTypeSerializer.Editor {
                             catch { return Array.Empty<Type>(); }
                         })
                         .FirstOrDefault(t => t.Name == typeName || t.FullName == typeName);
+                    
+                    // No instance for static members
+                    instance = null;
                 }
                 
-                if (targetType == null || targetMemberName == null)
+                if (targetType == null || targetMemberName == null) {
+                    Debug.LogWarning($"Could not resolve target type for member '{memberName}'");
                     return null;
-                
-                // Try to find and invoke the member
-                const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-                
-                // Try property first
-                var prop = targetType.GetProperty(targetMemberName, flags);
-                if (prop != null && prop.CanRead) {
-                    var value = prop.GetValue(null);
-                    if (value is IEnumerable<Type> enumerable)
-                        return enumerable;
                 }
                 
-                // Try method
-                var method = targetType.GetMethod(targetMemberName, flags, null, Type.EmptyTypes, null);
-                if (method != null) {
-                    var value = method.Invoke(null, null);
-                    if (value is IEnumerable<Type> enumerable)
-                        return enumerable;
+                // Try to resolve the member value
+                var result = TryGetMemberValue(targetType, targetMemberName, instance);
+                if (result == null) {
+                    var memberType = instance != null ? "instance" : "static";
+                    Debug.LogWarning($"Could not find {memberType} member '{targetMemberName}' in type '{targetType.Name}' that returns IEnumerable<Type>");
                 }
                 
-                // Try field
-                var field = targetType.GetField(targetMemberName, flags);
-                if (field != null) {
-                    var value = field.GetValue(null);
-                    if (value is IEnumerable<Type> enumerable)
-                        return enumerable;
-                }
-                
-                return null;
+                return result;
             }
             catch (Exception ex) {
                 Debug.LogError($"Error resolving types from member '{memberName}': {ex}");
                 return null;
             }
+        }
+        
+        /// <summary>
+        /// Gets the type that declares the field (the parent object containing the SerializedType field).
+        /// </summary>
+        static Type? GetDeclaringType(InspectorProperty property) {
+            // Try to get the parent value's type (the class containing the field)
+            var parent = property.Parent;
+            if (parent?.ValueEntry != null) {
+                var parentValue = parent.ValueEntry.WeakSmartValue;
+                if (parentValue != null) {
+                    return parentValue.GetType();
+                }
+            }
+            
+            // Fallback: try to get from property info
+            var memberInfo = property.Info.GetMemberInfo();
+            if (memberInfo is not null) {
+                return memberInfo.DeclaringType;
+            }
+            
+            return null;
+        }
+        
+        /// <summary>
+        /// Gets the parent instance that contains the SerializedType field.
+        /// </summary>
+        static object? GetDeclaringInstance(InspectorProperty property) {
+            var parent = property.Parent;
+            if (parent?.ValueEntry != null) {
+                return parent.ValueEntry.WeakSmartValue;
+            }
+            
+            return null;
+        }
+        
+        /// <summary>
+        /// Tries to get a value from a member (property, method, or field).
+        /// Supports both static and instance members.
+        /// </summary>
+        static IEnumerable<Type>? TryGetMemberValue(Type targetType, string memberName, object? instance = null) {
+            const BindingFlags staticFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+            const BindingFlags instanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            
+            // Determine which binding flags to use
+            var flags = instance != null ? instanceFlags : staticFlags;
+            
+            // Try property first
+            var prop = targetType.GetProperty(memberName, flags);
+            if (prop != null && prop.CanRead) {
+                var value = prop.GetValue(instance);
+                if (value is IEnumerable<Type> enumerable)
+                    return enumerable;
+            }
+            
+            // Try method
+            var method = targetType.GetMethod(memberName, flags, null, Type.EmptyTypes, null);
+            if (method != null) {
+                var value = method.Invoke(instance, null);
+                if (value is IEnumerable<Type> enumerable)
+                    return enumerable;
+            }
+            
+            // Try field
+            var field = targetType.GetField(memberName, flags);
+            if (field != null) {
+                var value = field.GetValue(instance);
+                if (value is IEnumerable<Type> enumerable)
+                    return enumerable;
+            }
+            
+            return null;
         }
     }
 }

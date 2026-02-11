@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -24,6 +26,35 @@ namespace Hissal.UnityTypeSerializer {
         [SerializeField]
         [SerializedTypeOptions(allowGenericTypeConstruction: true, useComplexConstructor: true)]
         SerializedType<ISerializedTypeExample>? complexConstructorMode;
+        
+        [Title("Custom Filtering", bold: true)]
+        [SerializeField]
+        [SerializedTypeOptions(
+            allowGenericTypeConstruction: true,
+            useComplexConstructor: true,
+            IncludeTypesResolver = nameof(GetCustomIncludeTypes)
+            //IncludeTypes = new Type[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample), typeof(ChainedStrategy<,>) }
+            //ExcludeTypes = new Type[] { typeof(SimpleType) }
+            //ExcludeTypesResolver = nameof(GetCustomExcludeTypes)
+            )]
+        SerializedType<ISerializedTypeExample>? customFilteredAnyType;
+        
+        IEnumerable<Type> GetCustomIncludeTypes() {
+            return new Type[] {
+                typeof(BasicExample), 
+                typeof(AdvancedExample),
+                typeof(ConcreteExample),
+                typeof(ChainedStrategy<,>), 
+                typeof(Repository<>)
+            };
+        }
+        
+        IEnumerable<Type> GetCustomExcludeTypes() {
+            return new Type[] {
+                typeof(BasicExample), 
+                typeof(AdvancedExample),
+            };
+        }
         
         [Title("Basic Options", bold: true)]
         [InfoBox("Default behavior - only concrete types are shown.")]
