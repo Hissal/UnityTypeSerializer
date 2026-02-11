@@ -32,14 +32,7 @@ namespace Hissal.UnityTypeSerializer {
         [SerializedTypeOptions(
             allowGenericTypeConstruction: true,
             useComplexConstructor: true,
-            CustomTypeFilter = new SerializedTypeFilter(IncludeResolver = nameof(GetCustomIncludeTypes))
-            //CustomTypeFilter = new SerializedTypeFilter(
-            //    IncludeTypes = new Type[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample), typeof(ChainedStrategy<,>) })
-            //CustomTypeFilter = new SerializedTypeFilter(
-            //    ExcludeTypes = new Type[] { typeof(SimpleType) })
-            //CustomTypeFilter = new SerializedTypeFilter(
-            //    ExcludeResolver = nameof(GetCustomExcludeTypes))
-            )]
+            CustomTypeFilter = nameof(GetCustomIncludeTypes))]
         SerializedType<ISerializedTypeExample>? customFilteredAnyType;
         
         IEnumerable<Type> GetCustomIncludeTypes() {
@@ -57,6 +50,10 @@ namespace Hissal.UnityTypeSerializer {
                 typeof(BasicExample), 
                 typeof(AdvancedExample),
             };
+        }
+        
+        static IEnumerable<Type> GetFilteredAnyTypes() {
+            return new Type[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) };
         }
         
         [Title("Basic Options", bold: true)]
@@ -136,8 +133,7 @@ namespace Hissal.UnityTypeSerializer {
         [InfoBox("Non-Generic with CustomTypeFilter\n" +
                  "Only shows specific types via CustomTypeFilter attribute property.")]
         [SerializeField]
-        [SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
-            IncludeTypes = new[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) }))]
+        [SerializedTypeOptions(CustomTypeFilter = nameof(GetFilteredAnyTypes))]
         SerializedType? filteredAnyType;
 
         [InfoBox("Non-Generic with generic construction enabled\n" +

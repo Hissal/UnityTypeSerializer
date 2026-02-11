@@ -36,12 +36,11 @@ SerializedType<IDamageEffect> damageType;
 
 ### 4. Exclude Specific Types
 ```csharp
+static SerializedTypeFilter GetExcludeFilter() =>
+    SerializedTypeFilter.Exclude(new[] { typeof(DeprecatedDamage), typeof(OldDamage) });
+
 [SerializeField]
-[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
-    ExcludeTypes = new[] { 
-        typeof(DeprecatedDamage), 
-        typeof(OldDamage) 
-    }))]
+[SerializedTypeOptions(CustomTypeFilter = nameof(GetExcludeFilter))]
 SerializedType<IDamageEffect> damageType;
 ```
 **Result**: Listed types won't appear in the dropdown
@@ -50,14 +49,11 @@ SerializedType<IDamageEffect> damageType;
 
 ### 5. Exclude Types via Method/Property
 ```csharp
-public static IEnumerable<Type> GetDeprecatedTypes() {
-    yield return typeof(OldDamage);
-    yield return typeof(LegacyDamage);
-}
+static SerializedTypeFilter GetDeprecatedFilter() =>
+    SerializedTypeFilter.Exclude("MyClass.GetDeprecatedTypes");
 
 [SerializeField]
-[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
-    ExcludeResolver = "MyClass.GetDeprecatedTypes"))]
+[SerializedTypeOptions(CustomTypeFilter = nameof(GetDeprecatedFilter))]
 SerializedType<IDamageEffect> damageType;
 ```
 **Result**: Types returned by the method/property are excluded
@@ -66,12 +62,11 @@ SerializedType<IDamageEffect> damageType;
 
 ### 6. Only Show Specific Types
 ```csharp
+static IEnumerable<Type> GetAllowedTypes() =>
+    new[] { typeof(FireDamage), typeof(IceDamage) };
+
 [SerializeField]
-[SerializedTypeOptions(CustomTypeFilter = new SerializedTypeFilter(
-    IncludeTypes = new[] { 
-        typeof(FireDamage), 
-        typeof(IceDamage) 
-    }))]
+[SerializedTypeOptions(CustomTypeFilter = nameof(GetAllowedTypes))]
 SerializedType<IDamageEffect> damageType;
 ```
 **Result**: ONLY the listed types appear (overrides normal filtering)
@@ -80,7 +75,7 @@ SerializedType<IDamageEffect> damageType;
 
 ### 7. Include Types via Method/Property
 ```csharp
-public static IEnumerable<Type> GetAllowedDamages() {
+static IEnumerable<Type> GetAllowedDamages() {
     yield return typeof(FireDamage);
     yield return typeof(IceDamage);
     yield return typeof(Container<>);
@@ -88,10 +83,8 @@ public static IEnumerable<Type> GetAllowedDamages() {
 
 [SerializeField]
 [SerializedTypeOptions(
-    includeGenericTypeDefinitions: true,
-    CustomTypeFilter = new SerializedTypeFilter(
-        IncludeResolver = "MyClass.GetAllowedDamages")
-)]
+    allowGenericTypeConstruction: true,
+    CustomTypeFilter = nameof(GetAllowedDamages))]
 SerializedType<IDamageEffect> damageType;
 ```
 **Result**: ONLY types from the resolver appear
@@ -100,14 +93,15 @@ SerializedType<IDamageEffect> damageType;
 
 ### 8. Combined Options
 ```csharp
+static SerializedTypeFilter GetCombinedFilter() =>
+    SerializedTypeFilter.Exclude(new[] { typeof(BrokenDamage) })
+        .WithExclude("GetDeprecatedTypes");
+
 [SerializeField]
 [SerializedTypeOptions(
-    includeGenericTypeDefinitions: true,
+    allowGenericTypeConstruction: true,
     allowSelfNesting: true,
-    CustomTypeFilter = new SerializedTypeFilter(
-        ExcludeTypes = new[] { typeof(BrokenDamage) },
-        ExcludeResolver = "GetDeprecatedTypes")
-)]
+    CustomTypeFilter = nameof(GetCombinedFilter))]
 SerializedType<IDamageEffect> damageType;
 ```
 **Result**: All options work together
@@ -228,10 +222,8 @@ public class DamageRegistry {
 public class PluginManager {
     [SerializeField]
     [SerializedTypeOptions(
-        includeGenericTypeDefinitions: true,
-        CustomTypeFilter = new SerializedTypeFilter(
-            IncludeResolver = "GetPluginTypes")
-    )]
+        allowGenericTypeConstruction: true,
+        CustomTypeFilter = nameof(GetPluginTypes))]
     SerializedType<IPlugin>[] plugins;
     
     static IEnumerable<Type> GetPluginTypes() {

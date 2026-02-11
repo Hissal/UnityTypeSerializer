@@ -288,7 +288,7 @@ public SerializedTypeOptionsAttribute(
 
 #### Properties
 
-- `CustomTypeFilter` - Unified type filter (include/exclude types and resolvers via `SerializedTypeFilter`)
+- `CustomTypeFilter` - String-based resolver name for a member returning `SerializedTypeFilter` or `IEnumerable<Type>`
 
 ---
 
