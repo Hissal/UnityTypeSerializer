@@ -58,8 +58,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
             
             // Resolve custom filter from string-based resolver
             var filter = ResolveSerializedTypeFilter(options?.CustomTypeFilter, property);
-            var customFilterTypes = filter.HasValue
-                ? GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToList()
+            var includedTypes = filter.HasValue
+                ? GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToHashSet()
                 : null;
             
             // Resolve excluded types from unified filter
@@ -67,18 +67,19 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 ? GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, property)?.ToHashSet()
                 : null;
             
-            IEnumerable<Type> typesToFilter = (customFilterTypes != null && customFilterTypes.Any())
-                ? customFilterTypes
+            IEnumerable<Type> typesToFilter = (includedTypes != null && includedTypes.Count > 0)
+                ? includedTypes.Where(t => baseConstraint.IsAssignableFrom(t))
                 : TypeCache.GetTypesDerivedFrom(baseConstraint);
+            typesToFilter = typesToFilter.Where(t => PassesInheritanceConstraints(t, options));
+            
+            if (excludedTypes != null && excludedTypes.Count > 0) {
+                typesToFilter = typesToFilter.Where(t => !excludedTypes.Contains(t));
+            }
             
             return typesToFilter
                 .Where(t => {
                     // Always exclude abstract types and interfaces
                     if (t.IsAbstract || t.IsInterface)
-                        return false;
-
-                    // Apply exclusion filter
-                    if (excludedTypes != null && excludedTypes.Contains(t))
                         return false;
 
                     // Check generic type definition (e.g., List<>)
@@ -90,6 +91,27 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 })
                 .OrderBy(t => SerializedTypeDrawerUtilities.GetTypeName(t))
                 .ToList();
+        }
+
+        static bool PassesInheritanceConstraints(Type candidateType, SerializedTypeOptionsAttribute? options) {
+            if (options == null)
+                return true;
+            
+            var inheritsAll = options.InheritsOrImplementsAll;
+            var inheritsAny = options.InheritsOrImplementsAny;
+            bool hasAll = inheritsAll != null && inheritsAll.Length > 0;
+            bool hasAny = inheritsAny != null && inheritsAny.Length > 0;
+            
+            if (!hasAll && !hasAny)
+                return true;
+            
+            if (hasAll && !inheritsAll!.All(constraint => constraint.IsAssignableFrom(candidateType)))
+                return false;
+            
+            if (hasAny && !inheritsAny!.Any(constraint => constraint.IsAssignableFrom(candidateType)))
+                return false;
+            
+            return true;
         }
         
         /// <summary>
