@@ -2,7 +2,21 @@
   "name": "com.hissal.unitytypeserializer",
   "version": "0.1.0",
   "displayName": "Unity Type Serializer",
-  "description": "Internal tooling for generic type construction (requires Odin Inspector).",
+  "description": "A Unity package providing serializable type references with support for generic type construction and inspector integration.",
   "unity": "6000.3",
-  "author": { "name": "Hissal" }
+  "keywords": [
+    "serialization",
+    "types",
+    "generics",
+    "inspector",
+    "odin"
+  ],
+  "author": {
+    "name": "Hissal"
+  },
+  "dependencies": {},
+  "license": "MIT",
+  "documentationUrl": "https://github.com/Hissal/UnityTypeSerializer/blob/main/README.md",
+  "changelogUrl": "https://github.com/Hissal/UnityTypeSerializer/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/Hissal/UnityTypeSerializer/blob/main/LICENSE.md"
 }
