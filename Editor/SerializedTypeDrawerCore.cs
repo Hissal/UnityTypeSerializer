@@ -106,6 +106,145 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 .ToList();
         }
 
+        /// <summary>
+        /// Checks whether a candidate type satisfies all C# generic parameter constraints
+        /// for the given generic parameter, returning a rich result that distinguishes
+        /// <em>visibility</em> (should the candidate appear in a dropdown) from
+        /// <em>validity</em> (can it be used as a concrete generic argument).
+        /// <para>Evaluates constraints in order:</para>
+        /// <list type="number">
+        ///   <item><description><c>class</c> — candidate must be a reference type (not value, pointer, byref, or void)</description></item>
+        ///   <item><description><c>struct</c> — candidate must be a non-nullable value type</description></item>
+        ///   <item><description><c>new()</c> — open generic definitions are visible but not valid (construction required); abstract classes and types without a public parameterless constructor are hidden</description></item>
+        ///   <item><description>Base class / interface constraints — all must be satisfied (AND semantics)</description></item>
+        /// </list>
+        /// <para>
+        /// <b>notnull</b> (C# 8+): Not reliably detectable at runtime via reflection. Not enforced.
+        /// </para>
+        /// <para>
+        /// <b>unmanaged</b> (C# 7.3+): Would require deep field inspection. Not enforced at runtime.
+        /// </para>
+        /// <para>
+        /// <b>Dependent generic parameter constraints</b> (<c>where T : U</c>): Skipped. These require
+        /// knowledge of already-selected type arguments and are not supported by this method.
+        /// Callers that support sequential argument selection should resolve such constraints externally.
+        /// </para>
+        /// </summary>
+        /// <param name="candidate">The type to test against the constraints.</param>
+        /// <param name="genericParameter">
+        /// The generic parameter whose constraints to evaluate, or <c>null</c> to skip all constraint checks.
+        /// Must have <see cref="Type.IsGenericParameter"/> == <c>true</c> when non-null.
+        /// </param>
+        /// <returns>A <see cref="GenericConstraintCheckResult"/> indicating visibility and validity.</returns>
+        public static GenericConstraintCheckResult CheckGenericParameterConstraints(Type candidate, Type? genericParameter) {
+            if (genericParameter == null)
+                return GenericConstraintCheckResult.Valid;
+
+            var attributes = genericParameter.GenericParameterAttributes;
+            var constraints = genericParameter.GetGenericParameterConstraints();
+
+            // Track whether the candidate is an open generic that passed new() hard checks
+            // but still needs construction before it can be a valid final argument.
+            // We defer the VisibleButInvalid return so that base/interface constraints
+            // are still evaluated — an open generic that fails those must be Hidden.
+            string? pendingVisibleButInvalidMessage = null;
+
+            // 1) Reference type constraint: where T : class
+            if ((attributes & GenericParameterAttributes.ReferenceTypeConstraint) != 0) {
+                if (candidate.IsValueType || candidate.IsPointer || candidate.IsByRef || candidate == typeof(void))
+                    return GenericConstraintCheckResult.Hidden(
+                        $"'{candidate.Name}' does not satisfy the 'class' constraint on '{genericParameter.Name}'");
+            }
+
+            // 2) Value type constraint: where T : struct
+            //    Nullable<T> is excluded (C# semantics: struct implies non-nullable).
+            if ((attributes & GenericParameterAttributes.NotNullableValueTypeConstraint) != 0) {
+                if (!candidate.IsValueType || Nullable.GetUnderlyingType(candidate) != null)
+                    return GenericConstraintCheckResult.Hidden(
+                        $"'{candidate.Name}' does not satisfy the 'struct' constraint on '{genericParameter.Name}'");
+            }
+
+            // 3) Default constructor constraint: where T : new()
+            //    Value types implicitly satisfy new() in C#.
+            if ((attributes & GenericParameterAttributes.DefaultConstructorConstraint) != 0) {
+                // 3a) Interfaces can never satisfy new()
+                if (candidate.IsInterface)
+                    return GenericConstraintCheckResult.Hidden(
+                        $"Interface '{candidate.Name}' cannot satisfy the 'new()' constraint on '{genericParameter.Name}'.");
+
+                // 3b) Abstract reference types can never satisfy new()
+                if (!candidate.IsValueType && candidate.IsAbstract)
+                    return GenericConstraintCheckResult.Hidden(
+                        $"Abstract type '{candidate.Name}' cannot satisfy the 'new()' constraint on '{genericParameter.Name}'.");
+
+                // 3c) Reference types (open or closed) must declare a public parameterless ctor.
+                //     If the generic definition lacks it, no constructed type will ever have it.
+                if (!candidate.IsValueType && candidate.GetConstructor(Type.EmptyTypes) == null)
+                    return GenericConstraintCheckResult.Hidden(
+                        $"'{candidate.Name}' has no public parameterless constructor required by 'new()' constraint on '{genericParameter.Name}'.");
+
+                // 3d) Open generic definitions with a parameterless ctor are visible (construction flow)
+                //     but not valid final arguments. Defer the result so base/interface constraints
+                //     are still evaluated below.
+                if (candidate.IsGenericTypeDefinition)
+                    pendingVisibleButInvalidMessage =
+                        $"Open generic '{candidate.Name}' requires construction before it can satisfy the 'new()' constraint on '{genericParameter.Name}'.";
+            }
+
+            // 4) Base class / interface constraints (AND semantics)
+            //    Dependent generic parameter constraints (where T : U) are skipped — they require
+            //    knowledge of already-selected arguments and are not handled at this level.
+            if (candidate.IsGenericTypeDefinition) {
+                // For open generic type definitions, check the candidate itself,
+                // its base-type chain, and its interfaces against the constraint
+                // definitions using generic type-definition comparison where needed.
+                var hierarchy = new List<Type>();
+                var current = (Type?)candidate;
+                while (current != null) {
+                    hierarchy.Add(current);
+                    current = current.BaseType;
+                }
+                hierarchy.AddRange(candidate.GetInterfaces());
+
+                foreach (var constraint in constraints) {
+                    if (constraint.IsGenericParameter) continue;
+
+                    bool satisfies = false;
+                    foreach (var typeInHierarchy in hierarchy) {
+                        if (constraint.IsGenericType && typeInHierarchy.IsGenericType) {
+                            if (typeInHierarchy.GetGenericTypeDefinition() == constraint.GetGenericTypeDefinition()) {
+                                satisfies = true;
+                                break;
+                            }
+                        }
+                        else if (constraint.IsAssignableFrom(typeInHierarchy)) {
+                            satisfies = true;
+                            break;
+                        }
+                    }
+
+                    if (!satisfies)
+                        return GenericConstraintCheckResult.Hidden(
+                            $"'{candidate.Name}' does not satisfy constraint '{constraint.Name}' on '{genericParameter.Name}'");
+                }
+            }
+            else {
+                foreach (var constraint in constraints) {
+                    if (constraint.IsGenericParameter) continue;
+                    if (!constraint.IsAssignableFrom(candidate))
+                        return GenericConstraintCheckResult.Hidden(
+                            $"'{candidate.Name}' does not satisfy constraint '{constraint.Name}' on '{genericParameter.Name}'");
+                }
+            }
+
+            // All hard constraints passed. If we deferred a VisibleButInvalid result
+            // (open generic under new()), return it now.
+            if (pendingVisibleButInvalidMessage != null)
+                return GenericConstraintCheckResult.VisibleButInvalid(pendingVisibleButInvalidMessage);
+
+            return GenericConstraintCheckResult.Valid;
+        }
+
         static bool PassesInheritanceConstraints(Type candidateType, SerializedTypeOptionsAttribute? options) {
             if (options == null)
                 return true;

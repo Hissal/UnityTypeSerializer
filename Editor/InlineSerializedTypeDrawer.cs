@@ -205,8 +205,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (info.Path.Count > 0) {
                 var currentType = Accessor.GetSelectedType();
                 var genericParam = currentType != null ? GetGenericParameterAtPath(currentType, info.Path) : null;
-                var constraints = genericParam?.GetGenericParameterConstraints() ?? Array.Empty<Type>();
-                var validTypes = BuildValidTypesForGenericParameter(constraints, info.Path);
+                var validTypes = BuildValidTypesForGenericParameter(genericParam, info.Path);
                 items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
             } else {
                 items = dropdownItems;
@@ -284,10 +283,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 return;
             
             var genericParam = info.GenericParameter ?? genericParams[info.ArgumentIndex.Value];
-            var constraints = genericParam.GetGenericParameterConstraints();
             
             // Build list of valid types for this generic parameter
-            var validTypes = BuildValidTypesForGenericParameter(constraints, info.Path);
+            var validTypes = BuildValidTypesForGenericParameter(genericParam, info.Path);
             
             var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
             
@@ -483,7 +481,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return currentType;
         }
         
-        List<Type> BuildValidTypesForGenericParameter(Type[] constraints, List<int> path) {
+        List<Type> BuildValidTypesForGenericParameter(Type? genericParameter, List<int> path) {
             bool allowSelfNesting = Options?.AllowSelfNesting ?? false;
             
             // Collect all types in the current type tree path to check for self-nesting
@@ -517,13 +515,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     if (!allowSelfNesting && t.IsGenericTypeDefinition && typesInPath.Contains(t))
                         return false;
                     
-                    // Check all constraints
-                    foreach (var constraint in constraints) {
-                        if (!constraint.IsAssignableFrom(t))
-                            return false;
-                    }
-                    
-                    return true;
+                    // Check all generic parameter constraints (class, struct, new(), base/interface)
+                    return SerializedTypeDrawerCore.CheckGenericParameterConstraints(t, genericParameter).ShowInDropdown;
                 })
                 .OrderBy(t => GetTypeName(t))
                 .ToList();
