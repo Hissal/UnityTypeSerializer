@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer {
@@ -12,7 +11,7 @@ namespace Hissal.UnityTypeSerializer {
     /// <typeparam name="TBase">
     /// The base class or interface that the serialized type must derive from or implement.
     /// </typeparam>
-    [Serializable, InlineProperty]
+    [Serializable]
     public sealed class SerializedType<TBase> where TBase : class {
         /// <summary>
         /// Stores the assembly-qualified name of the serialized type.
@@ -53,7 +52,7 @@ namespace Hissal.UnityTypeSerializer {
     /// </remarks>
     /// <seealso cref="SerializedType{TBase}"/>
     /// <seealso cref="SerializedTypeOptionsAttribute"/>
-    [Serializable, InlineProperty]
+    [Serializable]
     public sealed class SerializedType {
         /// <summary>
         /// Stores the assembly-qualified name of the serialized type.

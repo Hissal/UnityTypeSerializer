@@ -443,7 +443,7 @@ GameObject:
   - component: {fileID: 919628995}
   - component: {fileID: 919628994}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: SerializedTypes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -481,6 +481,16 @@ MonoBehaviour:
       Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
       Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
       Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+  customFilteredAnyType:
+    aqn: 
+  concreteOnlyDefault:
+    aqn: 
+  concreteAndAbstract:
+    aqn: 
+  interfacesOnly:
+    aqn: 
+  allTypeKinds:
+    aqn: 
   concreteOnly:
     aqn: 
   constructionRequired:
@@ -511,6 +521,24 @@ MonoBehaviour:
   repository:
     aqn: 
   strategy:
+    aqn: 
+  strategyCtorMode:
+    aqn: 
+  anyType:
+    aqn: 
+  filteredAnyType:
+    aqn: 
+  anyTypeWithGenerics:
+    aqn: 
+  constraintInterfaceOnly:
+    aqn: 
+  constraintNewOnly:
+    aqn: 
+  constraintClassOnly:
+    aqn: 
+  constraintStructOnly:
+    aqn: 
+  constraintClassNew:
     aqn: 
 --- !u!4 &919628995
 Transform:

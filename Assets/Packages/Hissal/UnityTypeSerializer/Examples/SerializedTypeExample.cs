@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using Hissal.UnityTypeSerializer;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-namespace Hissal.UnityTypeSerializer {
+namespace Hissal.UnityTypeSerializer.Examples {
     /// <summary>
     /// Comprehensive test cases for SerializedType with nested generic type construction.
     /// Demonstrates various scenarios including deep nesting, multiple constraints, and real-world patterns.
