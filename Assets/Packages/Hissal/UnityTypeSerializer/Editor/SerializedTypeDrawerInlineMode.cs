@@ -11,7 +11,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
     /// This is the default, simpler mode for SerializedType fields.
     /// Shared between generic and non-generic SerializedType via <see cref="ISerializedTypeValueAccessor"/>.
     /// </summary>
-    internal sealed class InlineSerializedTypeDrawer : SerializedTypeDrawerBase, ISerializedTypeDrawerImplementation {
+    internal sealed class SerializedTypeDrawerInlineMode : SerializedTypeDrawerBase, ISerializedTypeDrawerImplementation {
         
         // UI Layout Constants
         const float MIN_DROPDOWN_WIDTH = 60f;
@@ -32,7 +32,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         GUIStyle? labelStyle;
         GUIStyle? literalStyle;
         
-        public InlineSerializedTypeDrawer(
+        public SerializedTypeDrawerInlineMode(
             InspectorProperty property,
             ISerializedTypeValueAccessor accessor,
             SerializedTypeOptionsAttribute? options,

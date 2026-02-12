@@ -13,13 +13,13 @@ namespace Hissal.UnityTypeSerializer.Editor {
     /// This drawer shows a full constructor interface with nested generic type support.
     /// Shared between generic and non-generic SerializedType via <see cref="ISerializedTypeValueAccessor"/>.
     /// </summary>
-    internal sealed class ComplexConstructorSerializedTypeDrawer : SerializedTypeDrawerBase, ISerializedTypeDrawerImplementation {
+    internal sealed class SerializedTypeDrawerConstructorMode : SerializedTypeDrawerBase, ISerializedTypeDrawerImplementation {
         
         Type[]? selectedTypeArguments;
         GenericConstructionState? constructionState;
         readonly List<GenericSelectorItem<Type>> dropdownItems;
         
-        public ComplexConstructorSerializedTypeDrawer(
+        public SerializedTypeDrawerConstructorMode(
             InspectorProperty property,
             ISerializedTypeValueAccessor accessor,
             SerializedTypeOptionsAttribute? options,

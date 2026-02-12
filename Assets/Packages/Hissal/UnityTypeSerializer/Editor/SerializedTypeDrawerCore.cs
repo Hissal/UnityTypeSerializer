@@ -26,7 +26,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             var drawerMode = options?.DrawerMode ?? SerializedTypeDrawerMode.Inline;
             
             if (drawerMode == SerializedTypeDrawerMode.Constructor) {
-                return new ComplexConstructorSerializedTypeDrawer(
+                return new SerializedTypeDrawerConstructorMode(
                     property,
                     accessor,
                     options,
@@ -34,7 +34,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 );
             }
             
-            return new InlineSerializedTypeDrawer(
+            return new SerializedTypeDrawerInlineMode(
                 property,
                 accessor,
                 options,
