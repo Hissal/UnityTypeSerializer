@@ -18,20 +18,20 @@ namespace Hissal.UnityTypeSerializer {
         [InfoBox("Inline Mode (Default) - Single line with multiple dropdowns\n" +
                  "This is the default drawer mode.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<ISerializedTypeExample>? inlineModeDefault;
         
         [InfoBox("Complex Constructor Mode - Step-by-step nested UI\n" +
                  "Use drawerMode parameter to specify the complex constructor.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true, drawerMode: SerializedTypeDrawerMode.Constructor)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true, DrawerMode = SerializedTypeDrawerMode.Constructor)]
         SerializedType<ISerializedTypeExample>? complexConstructorMode;
         
         
         [Title("Custom Filtering", bold: true)]
         [SerializeField]
         [SerializedTypeOptions(
-            allowGenericTypeConstruction: true,
+            AllowGenericTypeConstruction = true,
             CustomTypeFilter = nameof(GetCustomIncludeTypes))]
         SerializedType<ISerializedTypeExample>? customFilteredAnyType;
         
@@ -87,64 +87,64 @@ namespace Hissal.UnityTypeSerializer {
         [InfoBox("AllowGenericTypeConstruction = true\n" +
                  "Shows generic types in dropdown. Selection forces immediate construction (no open generics allowed).")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<ISerializedTypeExample>? constructionRequired;
 
         [InfoBox("AllowOpenGenerics = true\n" +
                  "Shows generic types but allows selecting them WITHOUT construction (e.g., List<>).")]
         [SerializeField]
-        [SerializedTypeOptions(allowOpenGenerics: true)]
+        [SerializedTypeOptions(AllowOpenGenerics = true)]
         SerializedType<ISerializedTypeExample>? openGenericsAllowed;
 
         [InfoBox("Both AllowGenericTypeConstruction and AllowOpenGenerics = true\n" +
                  "Selecting a generic type assigns it immediately, but a '▶ Construct' button appears to optionally construct it.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true, allowOpenGenerics: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true, AllowOpenGenerics = true)]
         SerializedType<ISerializedTypeExample>? optionalConstruction;
 
         [Title("Self-Nesting Option", bold: true)]
         [InfoBox("AllowSelfNesting = false (default)\n" +
                  "Prevents recursive nesting like Wrapper<Wrapper<Wrapper<...>>>")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<ISerializedTypeExample>? noSelfNesting;
 
         [InfoBox("AllowSelfNesting = true\n" +
                  "Allows recursive nesting like Wrapper<Wrapper<int>>")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true, allowSelfNesting: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true, AllowSelfNesting = true)]
         SerializedType<ISerializedTypeExample>? selfNestingAllowed;
 
         [Title("Complex Nested Examples", bold: true)]
         [InfoBox("Deeply nested generic construction test")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<ISerializedTypeExample>? deeplyNested;
 
         [InfoBox("Extreme nesting with multiple parameters at each level")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true, allowSelfNesting: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true, AllowSelfNesting = true)]
         SerializedType<ISerializedTypeExample>? extremeNesting;
 
         [Title("Real-World Scenarios", bold: true)]
         [InfoBox("Damage effect system - supports elemental damage with nested types")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IDamageEffect>? damageEffect;
 
         [InfoBox("Repository pattern - generic data storage")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IRepository>? repository;
 
         [InfoBox("Strategy pattern - pluggable algorithms")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IStrategy>? strategy;
 
         [InfoBox("Strategy pattern - pluggable algorithms")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true, drawerMode: SerializedTypeDrawerMode.Constructor)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true, DrawerMode = SerializedTypeDrawerMode.Constructor)]
         SerializedType<IStrategy>? strategyCtorMode;
         
         [Title("Non-Generic SerializedType (New)", bold: true)]
@@ -162,37 +162,37 @@ namespace Hissal.UnityTypeSerializer {
         [InfoBox("Non-Generic with generic construction enabled\n" +
                  "Shows generic types and allows construction.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType? anyTypeWithGenerics;
 
         [Title("Generic Constraint Examples", bold: true)]
         [InfoBox("Interface constraint only: where T : IConstraintExample")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IConstraintExample>? constraintInterfaceOnly;
 
         [InfoBox("new() constraint: where T : IConstraintExample, new()\n" +
                  "Should exclude ConstraintNoDefaultConstructor.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IConstraintExample>? constraintNewOnly;
 
         [InfoBox("class constraint: where T : class, IConstraintExample\n" +
                  "Should exclude struct implementations.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IConstraintExample>? constraintClassOnly;
 
         [InfoBox("struct constraint: where T : struct, IConstraintExample\n" +
                  "Should include only struct implementations.")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IConstraintExample>? constraintStructOnly;
 
         [InfoBox("Combined: class + interface + new()\n" +
                  "where T : class, IConstraintExample, new()")]
         [SerializeField]
-        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
         SerializedType<IConstraintExample>? constraintClassNew;
 
         [Button("Log All Type Infos", ButtonSizes.Large), GUIColor(0.4f, 0.8f, 1f)]

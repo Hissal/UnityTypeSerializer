@@ -69,8 +69,8 @@ Added examples demonstrating the enum-based drawer mode:
 ```csharp
 // Using the new enum-based syntax
 [SerializedTypeOptions(
-    allowGenericTypeConstruction: true, 
-    drawerMode: SerializedTypeDrawerMode.Constructor)]
+    AllowGenericTypeConstruction = true, 
+    DrawerMode = SerializedTypeDrawerMode.Constructor)]
 SerializedType<ISerializedTypeExample>? complexConstructorMode;
 ```
 
@@ -80,11 +80,11 @@ Use the new `drawerMode` parameter:
 
 ```csharp
 // Use Constructor mode
-[SerializedTypeOptions(drawerMode: SerializedTypeDrawerMode.Constructor)]
+[SerializedTypeOptions(DrawerMode = SerializedTypeDrawerMode.Constructor)]
 SerializedType<IMyInterface> myField;
 
 // Or explicitly use default Inline mode
-[SerializedTypeOptions(drawerMode: SerializedTypeDrawerMode.Inline)]
+[SerializedTypeOptions(DrawerMode = SerializedTypeDrawerMode.Inline)]
 SerializedType<IMyInterface> myField;
 
 // Or omit entirely for default inline mode

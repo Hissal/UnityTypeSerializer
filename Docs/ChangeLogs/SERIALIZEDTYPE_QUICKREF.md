@@ -14,7 +14,7 @@ SerializedType<IDamageEffect> damageType;
 ### 2. Enable Generic Type Construction
 ```csharp
 [SerializeField]
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IDamageEffect> damageType;
 ```
 **Result**: Can select `Container<T>` and then fill in `T` with any valid type
@@ -25,8 +25,8 @@ SerializedType<IDamageEffect> damageType;
 ```csharp
 [SerializeField]
 [SerializedTypeOptions(
-    includeGenericTypeDefinitions: true,
-    allowSelfNesting: true
+    AllowGenericTypeConstruction = true,
+    AllowSelfNesting = true
 )]
 SerializedType<IDamageEffect> damageType;
 ```
@@ -83,7 +83,7 @@ static IEnumerable<Type> GetAllowedDamages() {
 
 [SerializeField]
 [SerializedTypeOptions(
-    allowGenericTypeConstruction: true,
+    AllowGenericTypeConstruction = true,
     CustomTypeFilter = nameof(GetAllowedDamages))]
 SerializedType<IDamageEffect> damageType;
 ```
@@ -99,8 +99,8 @@ static SerializedTypeFilter GetCombinedFilter() =>
 
 [SerializeField]
 [SerializedTypeOptions(
-    allowGenericTypeConstruction: true,
-    allowSelfNesting: true,
+    AllowGenericTypeConstruction = true,
+    AllowSelfNesting = true,
     CustomTypeFilter = nameof(GetCombinedFilter))]
 SerializedType<IDamageEffect> damageType;
 ```
@@ -191,7 +191,7 @@ public static readonly Type[] MyTypes = {
 ```csharp
 public class EffectFactory : MonoBehaviour {
     [SerializeField]
-    [SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+    [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
     SerializedType<IEffect> effectType;
     
     public IEffect Create() {
@@ -204,7 +204,7 @@ public class EffectFactory : MonoBehaviour {
 ```csharp
 public class DamageRegistry {
     [SerializeField]
-    [SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+    [SerializedTypeOptions(AllowGenericTypeConstruction = true)]
     SerializedType<IDamageEffect>[] registeredDamages;
     
     public void Initialize() {
@@ -222,7 +222,7 @@ public class DamageRegistry {
 public class PluginManager {
     [SerializeField]
     [SerializedTypeOptions(
-        allowGenericTypeConstruction: true,
+        AllowGenericTypeConstruction = true,
         CustomTypeFilter = nameof(GetPluginTypes))]
     SerializedType<IPlugin>[] plugins;
     

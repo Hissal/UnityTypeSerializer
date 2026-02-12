@@ -21,11 +21,11 @@ Successfully refactored `SerializedTypeOptionsAttribute` to use an enum-based `D
 
 ### 4. **Updated**: `SerializedTypeExample.cs`
 - Removed legacy `useComplexConstructor` examples
-- Updated to use `drawerMode: SerializedTypeDrawerMode.Constructor` syntax
+- Updated to use `DrawerMode = SerializedTypeDrawerMode.Constructor` syntax
 - Simplified drawer mode demonstration
 
 ### 5. **Updated**: `DRAWER_MODES.md`
-- Replaced all `useComplexConstructor: true` references with `drawerMode: SerializedTypeDrawerMode.Constructor`
+- Replaced all `useComplexConstructor: true` references with `DrawerMode = SerializedTypeDrawerMode.Constructor`
 - Updated API reference section
 - Updated troubleshooting examples
 - Removed "backward compatibility" language
@@ -38,15 +38,15 @@ Successfully refactored `SerializedTypeOptionsAttribute` to use an enum-based `D
 
 ### Default Inline Mode
 ```csharp
-[SerializedTypeOptions(allowGenericTypeConstruction: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IMyInterface> myField;
 ```
 
 ### Complex Constructor Mode
 ```csharp
 [SerializedTypeOptions(
-    allowGenericTypeConstruction: true,
-    drawerMode: SerializedTypeDrawerMode.Constructor)]
+    AllowGenericTypeConstruction = true,
+    DrawerMode = SerializedTypeDrawerMode.Constructor)]
 SerializedType<IMyInterface> myField;
 ```
 

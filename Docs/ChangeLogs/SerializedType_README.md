@@ -1,5 +1,7 @@
 ﻿# SerializedType<TBase> - Attribute-Based Configuration with Generic Type Construction
 
+> **Note:** This document contains outdated terminology and examples. For current API usage, see `SerializedTypeExample.cs` and the main README. The property names have been updated to use PascalCase property initializers (e.g., `AllowGenericTypeConstruction = true`).
+
 ## Overview
 `SerializedType<TBase>` now supports attribute-based configuration for controlling which types appear in the dropdown using the `SerializedTypeOptionsAttribute`. Additionally, when you select an open generic type (e.g., `Resistance<TElement>`), the drawer allows you to construct a concrete type by selecting the generic type arguments based on their constraints.
 
@@ -25,7 +27,7 @@ To include open generic type definitions (e.g., `List<>`, `Dictionary<,>`):
 
 ```csharp
 [SerializeField]
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IMyInterface> mySerializedType;
 ```
 
@@ -37,7 +39,7 @@ To include constructed generic types (e.g., `List<int>`, `Dictionary<string, int
 
 ```csharp
 [SerializeField]
-[SerializedTypeOptions(includeConstructedGenerics: true)]
+[SerializedTypeOptions(AllowOpenGenerics = true)]
 SerializedType<IMyInterface> mySerializedType;
 ```
 
@@ -49,7 +51,7 @@ To include both open and constructed generic types:
 
 ```csharp
 [SerializeField]
-[SerializedTypeOptions(includeGenericTypeDefinitions: true, includeConstructedGenerics: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true, AllowOpenGenerics = true)]
 SerializedType<IMyInterface> mySerializedType;
 ```
 
@@ -173,17 +175,10 @@ The dropdown displays user-friendly names:
 
 ## Comparison to Previous Approach
 
-### Before (Constructor Parameters)
-```csharp
-// Doesn't work well with Unity serialization
-[SerializeField] 
-SerializedType<IMyInterface> mySerializedType = new(includeGenericTypeDefinitions: true);
-```
-
-### After (Attribute-Based)
+### Attribute-Based Configuration
 ```csharp
 // Clean and serialization-friendly
 [SerializeField]
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IMyInterface> mySerializedType;
 ```

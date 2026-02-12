@@ -10,7 +10,7 @@ The `SerializedType<TBase>` system provides a powerful way to select and constru
 - Example: `SerializedType<IDamageEffect>` shows all concrete damage types
 
 ### 2. **Generic Type Construction**
-- Enable with `[SerializedTypeOptions(includeGenericTypeDefinitions: true)]`
+- Enable with `[SerializedTypeOptions(AllowGenericTypeConstruction = true)]`
 - Select open generic types (e.g., `Container<T>`)
 - Fill in type arguments interactively
 - Supports nested generics at any depth (e.g., `Wrapper<Container<ElementalDamage<FireElement>>>`)
@@ -26,12 +26,12 @@ The `SerializedType<TBase>` system provides a powerful way to select and constru
 
 ### 4. **Self-Nesting Control**
 - **Default (false)**: Prevents `Type<Type<Type<...>>>` structures
-- **Enabled**: `[SerializedTypeOptions(allowSelfNesting: true)]`
+- **Enabled**: `[SerializedTypeOptions(AllowSelfNesting = true)]`
   - Allows recursive type structures like `MegaWrapper<MegaWrapper<int>>`
 
 ### 5. **Open Generic Support**
 - **Default (false)**: All type arguments must be concrete
-- **Enabled**: `[SerializedTypeOptions(allowOpenGenerics: true)]`
+- **Enabled**: `[SerializedTypeOptions(AllowOpenGenerics = true)]`
   - Allows partially constructed generics like `MyType<T>`
 
 ### 6. **Type Filtering**
@@ -139,14 +139,14 @@ The `SerializedTypeExample.cs` file includes comprehensive test cases:
 
 ### 1. Plugin/Mod System
 ```csharp
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IPlugin> pluginType;
 ```
 
 ### 2. Damage System
 ```csharp
 [SerializedTypeOptions(
-    allowGenericTypeConstruction: true,
+    AllowGenericTypeConstruction = true,
     CustomTypeFilter = nameof(GetDamageFilter))]
 SerializedType<IDamageEffect> damageType;
 
@@ -157,8 +157,8 @@ static SerializedTypeFilter GetDamageFilter() =>
 ### 3. Generic Factory
 ```csharp
 [SerializedTypeOptions(
-    allowGenericTypeConstruction: true,
-    allowSelfNesting: false
+    AllowGenericTypeConstruction = true,
+    AllowSelfNesting = false
 )]
 SerializedType<IFactory> factoryType;
 ```
@@ -166,7 +166,7 @@ SerializedType<IFactory> factoryType;
 ### 4. Data Container Selection
 ```csharp
 [SerializedTypeOptions(
-    allowGenericTypeConstruction: true,
+    AllowGenericTypeConstruction = true,
     CustomTypeFilter = "GetContainerTypes")]
 SerializedType<IDataContainer> containerType;
 ```

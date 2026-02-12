@@ -97,7 +97,7 @@ When you select `Resistance<TElement>`:
 **Step 1:** Select an outer generic type
 ```csharp
 [SerializeField]
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IMyInterface> myType;
 
 // Select: Container<T> where T : class, IElement
@@ -158,7 +158,7 @@ Use the provided `SerializedTypeExample.cs` to test:
 
 ### Test 1: Multiple Generic Parameters
 ```csharp
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IMyInterface> multiGeneric;
 
 // Select MultiGenericType<T1, T2>
@@ -169,7 +169,7 @@ SerializedType<IMyInterface> multiGeneric;
 
 ### Test 2: Open Generic with new() (Should Block)
 ```csharp
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IMyInterface> resistance;
 
 // Select Resistance<TElement> (has new() constraint)
@@ -179,7 +179,7 @@ SerializedType<IMyInterface> resistance;
 
 ### Test 3: Open Generic without new() (Should Allow)
 ```csharp
-[SerializedTypeOptions(includeGenericTypeDefinitions: true)]
+[SerializedTypeOptions(AllowGenericTypeConstruction = true)]
 SerializedType<IMyInterface> container;
 
 // Select Container<T> (no new() constraint)
