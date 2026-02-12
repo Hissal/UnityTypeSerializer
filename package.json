@@ -1,5 +1,5 @@
 ﻿{
-  "name": "com.hissal.unitytypeserializer",
+  "name": "com.hissal.unity-type-serializer",
   "version": "0.1.0",
   "displayName": "Unity Type Serializer",
   "description": "A Unity package providing serializable type references with support for generic type construction and inspector integration.",
