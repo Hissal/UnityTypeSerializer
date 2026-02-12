@@ -696,9 +696,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
 
         void ShowTypeArgumentSelectorRecursive(List<int> path, int argIndex, Type genericParameter, Type?[] targetArgsArray) {
-            var constraints = genericParameter.GetGenericParameterConstraints();
             bool allowSelfNesting = Options?.AllowSelfNesting ?? false;
-            bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
             // Generic argument candidates are filtered only by generic parameter constraints
             // and generic construction rules (self-nesting prevention, etc.).
@@ -746,57 +744,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     if (!allowSelfNesting && t.IsGenericTypeDefinition && parentGenericTypes.Contains(t))
                         return false;
                     
-                    // Check special constraints first
-                    var attributes = genericParameter.GenericParameterAttributes;
-                    
-                    // If new() constraint is present, exclude open generic types
-                    if ((attributes & GenericParameterAttributes.DefaultConstructorConstraint) != 0) {
-                        if (t.IsGenericTypeDefinition)
-                            return false;
-                        if (!t.IsValueType && t.GetConstructor(Type.EmptyTypes) == null)
-                            return false;
-                    }
-                    
-                    if ((attributes & GenericParameterAttributes.NotNullableValueTypeConstraint) != 0) {
-                        if (!t.IsValueType || Nullable.GetUnderlyingType(t) != null)
-                            return false;
-                    }
-                    
-                    if ((attributes & GenericParameterAttributes.ReferenceTypeConstraint) != 0) {
-                        if (t.IsValueType)
-                            return false;
-                    }
-                    
-                    // For generic type definitions, check if they could satisfy interface constraints
-                    if (t.IsGenericTypeDefinition) {
-                        var interfaces = t.GetInterfaces();
-                        foreach (var constraint in constraints) {
-                            bool satisfies;
-                            
-                            // Check direct constraint match or generic interface match
-                            if (constraint.IsGenericType) {
-                                var constraintDef = constraint.GetGenericTypeDefinition();
-                                satisfies = interfaces.Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == constraintDef);
-                            }
-                            else {
-                                // For non-generic constraints, check if the type or its interfaces implement it
-                                satisfies = interfaces.Any(i => constraint.IsAssignableFrom(i));
-                            }
-                            
-                            if (!satisfies)
-                                return false;
-                        }
-                        return true;
-                    }
-                    
-                    // For concrete types, check all constraints normally
-                    foreach (var constraint in constraints) {
-                        if (!constraint.IsAssignableFrom(t)) {
-                            return false;
-                        }
-                    }
-                    
-                    return true;
+                    // Check all generic parameter constraints (class, struct, new(), base/interface)
+                    return SerializedTypeDrawerCore.CheckGenericParameterConstraints(t, genericParameter).ShowInDropdown;
                 })
                 .OrderBy(t => GetTypeName(t))
                 .ToList();

@@ -165,6 +165,36 @@ namespace Hissal.UnityTypeSerializer {
         [SerializedTypeOptions(allowGenericTypeConstruction: true)]
         SerializedType? anyTypeWithGenerics;
 
+        [Title("Generic Constraint Examples", bold: true)]
+        [InfoBox("Interface constraint only: where T : IConstraintExample")]
+        [SerializeField]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IConstraintExample>? constraintInterfaceOnly;
+
+        [InfoBox("new() constraint: where T : IConstraintExample, new()\n" +
+                 "Should exclude ConstraintNoDefaultConstructor.")]
+        [SerializeField]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IConstraintExample>? constraintNewOnly;
+
+        [InfoBox("class constraint: where T : class, IConstraintExample\n" +
+                 "Should exclude struct implementations.")]
+        [SerializeField]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IConstraintExample>? constraintClassOnly;
+
+        [InfoBox("struct constraint: where T : struct, IConstraintExample\n" +
+                 "Should include only struct implementations.")]
+        [SerializeField]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IConstraintExample>? constraintStructOnly;
+
+        [InfoBox("Combined: class + interface + new()\n" +
+                 "where T : class, IConstraintExample, new()")]
+        [SerializeField]
+        [SerializedTypeOptions(allowGenericTypeConstruction: true)]
+        SerializedType<IConstraintExample>? constraintClassNew;
+
         [Button("Log All Type Infos", ButtonSizes.Large), GUIColor(0.4f, 0.8f, 1f)]
         void LogAllTypeInfos() {
             Debug.Log("=== SerializedType Test Cases - Type Information ===\n");
@@ -185,6 +215,11 @@ namespace Hissal.UnityTypeSerializer {
             LogTypeInfoNonGeneric("Any Type", anyType);
             LogTypeInfoNonGeneric("Filtered Any Type", filteredAnyType);
             LogTypeInfoNonGeneric("Any Type With Generics", anyTypeWithGenerics);
+            LogTypeInfo("Constraint Interface Only", constraintInterfaceOnly);
+            LogTypeInfo("Constraint new() Only", constraintNewOnly);
+            LogTypeInfo("Constraint class Only", constraintClassOnly);
+            LogTypeInfo("Constraint struct Only", constraintStructOnly);
+            LogTypeInfo("Constraint class + new()", constraintClassNew);
             
             Debug.Log("\n=== End of Type Information ===");
         }
@@ -460,5 +495,63 @@ namespace Hissal.UnityTypeSerializer {
     public sealed class ChainedStrategy<TStrat1, TStrat2> : IStrategy 
         where TStrat1 : IStrategy 
         where TStrat2 : IStrategy 
+    { }
+
+    // ============================================================================
+    // GENERIC CONSTRAINT EXAMPLES
+    // Covers: class, struct, new(), interface, and combined constraints.
+    // Used as manual inspection targets and potential test fixtures.
+    // ============================================================================
+
+    /// <summary>Shared marker interface for constraint example types.</summary>
+    public interface IConstraintExample { }
+
+    /// <summary>Concrete class implementing <see cref="IConstraintExample"/>.</summary>
+    public sealed class ConcreteConstraintImpl : IConstraintExample { }
+
+    /// <summary>Struct implementing <see cref="IConstraintExample"/>.</summary>
+    public struct ConstraintStructImpl : IConstraintExample { }
+
+    /// <summary>Interface-only constraint: <c>where T : IConstraintExample</c>.</summary>
+    public sealed class ConstraintInterface<T> : IConstraintExample
+        where T : IConstraintExample
+    { }
+
+    /// <summary>Interface + new() constraint: <c>where T : IConstraintExample, new()</c>.</summary>
+    public sealed class ConstraintNew<T> : IConstraintExample
+        where T : IConstraintExample, new()
+    { }
+
+    /// <summary>Class + interface constraint: <c>where T : class, IConstraintExample</c>.</summary>
+    public sealed class ConstraintClass<T> : IConstraintExample
+        where T : class, IConstraintExample
+    { }
+
+    /// <summary>Struct + interface constraint: <c>where T : struct, IConstraintExample</c>.</summary>
+    public sealed class ConstraintStruct<T> : IConstraintExample
+        where T : struct, IConstraintExample
+    { }
+
+    /// <summary>Struct wrapper with interface constraint: <c>where T : IConstraintExample</c> (struct itself).</summary>
+    public struct ConstraintStructWrapper<T> : IConstraintExample
+        where T : IConstraintExample
+    { }
+
+    /// <summary>
+    /// Class with no public parameterless constructor.
+    /// Should be excluded by <c>new()</c> constraint filtering.
+    /// </summary>
+    public sealed class ConstraintNoDefaultConstructor : IConstraintExample {
+        public ConstraintNoDefaultConstructor(int value) { _ = value; }
+    }
+
+    /// <summary>Class + interface + new() constraint: <c>where T : class, IConstraintExample, new()</c>.</summary>
+    public sealed class ConstraintClassNew<T> : IConstraintExample
+        where T : class, IConstraintExample, new()
+    { }
+
+    /// <summary>Struct + interface + new() constraint: <c>where T : struct, IConstraintExample</c> (new() implied).</summary>
+    public sealed class ConstraintStructNew<T> : IConstraintExample
+        where T : struct, IConstraintExample
     { }
 }
