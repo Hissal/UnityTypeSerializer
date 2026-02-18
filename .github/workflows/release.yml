@@ -95,24 +95,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add public remote
-        env:
-          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
-          PUBLIC_REPO_URL: ${{ secrets.PUBLIC_REPO_URL }}
-        run: |
-          # Remove remote if it already exists
-          git remote remove public 2>/dev/null || true
-          
-          # Add public remote with token authentication
-          git remote add public "https://x-access-token:${PUBLIC_REPO_TOKEN}@${PUBLIC_REPO_URL}"
-          
-          # Verify remote was added
-          echo "Public remote configured:"
-          git remote -v | grep public
-
       - name: Split and push to public repository
         env:
           PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          PUBLIC_REPO_URL: ${{ secrets.PUBLIC_REPO_URL }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
@@ -135,8 +121,8 @@ jobs:
           git commit -m "chore: release version $VERSION"
           
           echo "Pushing to public repository..."
-          # Push to public repository with verbose output
-          git push public pkg-split:main --force --verbose
+          # Push directly using the URL with token (bypasses remote config issues)
+          git push "https://x-access-token:${PUBLIC_REPO_TOKEN}@${PUBLIC_REPO_URL}" HEAD:main --force --verbose
           
           echo "Cleaning up..."
           # Switch back to original branch and clean up
