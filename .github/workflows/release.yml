@@ -102,6 +102,14 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
+          # Normalize URL - remove .git suffix if present, Git will add it back
+          NORMALIZED_URL="${PUBLIC_REPO_URL%.git}"
+          
+          # Debug output (token will be masked by GitHub)
+          echo "Repo URL (normalized): ${NORMALIZED_URL}"
+          echo "Token present: $([ -n "${PUBLIC_REPO_TOKEN}" ] && echo 'yes' || echo 'no')"
+          echo "Token length: ${#PUBLIC_REPO_TOKEN}"
+          
           echo "Creating subtree split for package directory..."
           # Create a temporary branch with only the package directory
           git subtree split --prefix=Assets/Packages/Hissal/UnityTypeSerializer -b pkg-split
@@ -121,8 +129,9 @@ jobs:
           git commit -m "chore: release version $VERSION"
           
           echo "Pushing to public repository..."
-          # Push directly using the URL with token (bypasses remote config issues)
-          git push "https://x-access-token:${PUBLIC_REPO_TOKEN}@${PUBLIC_REPO_URL}" HEAD:main --force --verbose
+          # Push directly using the URL with token
+          # Format: https://x-access-token:TOKEN@github.com/USER/REPO
+          git push "https://x-access-token:${PUBLIC_REPO_TOKEN}@${NORMALIZED_URL}" HEAD:main --force --verbose
           
           echo "Cleaning up..."
           # Switch back to original branch and clean up
