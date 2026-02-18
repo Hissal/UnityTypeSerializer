@@ -253,8 +253,40 @@ jobs:
           echo "=== Pushing to Public Repository ==="
           echo "Pushing to: https://x-access-token:***@${NORMALIZED_URL}"
           
-          # Push using the authenticated URL - should work now that we've cleared interfering auth
-          if git push "${AUTH_URL}" HEAD:main --force --verbose 2>&1; then
+          # Check if we need to preserve history (fetch existing main)
+          echo "Fetching current main branch from public repository..."
+          if git fetch "${AUTH_URL}" main:refs/remotes/public/main 2>/dev/null; then
+            echo "✓ Fetched existing main branch"
+            
+            # Check if our commit is based on the public main
+            MERGE_BASE=$(git merge-base HEAD refs/remotes/public/main 2>/dev/null || echo "none")
+            PUBLIC_HEAD=$(git rev-parse refs/remotes/public/main 2>/dev/null || echo "none")
+            
+            if [ "$MERGE_BASE" != "$PUBLIC_HEAD" ]; then
+              echo "⚠ Warning: Split branch history diverges from public repository"
+              echo "  This can happen when the subtree split creates different commits"
+              echo "  Attempting to rebase onto public main to preserve history..."
+              
+              # Try to rebase our changes onto the public main
+              if git rebase refs/remotes/public/main 2>/dev/null; then
+                echo "✓ Successfully rebased onto public main - history preserved"
+                FORCE_FLAG=""
+              else
+                echo "⚠ Rebase failed - using force push (history will be rewritten)"
+                git rebase --abort 2>/dev/null || true
+                FORCE_FLAG="--force"
+              fi
+            else
+              echo "✓ Split branch is up-to-date with public main"
+              FORCE_FLAG=""
+            fi
+          else
+            echo "ℹ Public repository is empty or unreachable - initial push"
+            FORCE_FLAG=""
+          fi
+          
+          # Push using the authenticated URL
+          if git push "${AUTH_URL}" HEAD:main ${FORCE_FLAG} --verbose 2>&1; then
             echo "✓ Push successful!"
           else
             PUSH_EXIT_CODE=$?
@@ -280,11 +312,11 @@ jobs:
           # Also push the tag to the public repository for the release
           echo ""
           echo "Pushing tag v${VERSION} to public repository..."
-          if git push "${AUTH_URL}" "v${VERSION}" --force 2>&1; then
+          if git push "${AUTH_URL}" "v${VERSION}" 2>&1; then
             echo "✓ Tag pushed successfully!"
           else
-            echo "⚠ Warning: Failed to push tag, but code was pushed successfully"
-            echo "  You may need to create the release manually"
+            echo "⚠ Warning: Failed to push tag (it may already exist)"
+            echo "  You may need to update or create the release manually"
           fi
           
           echo "Cleaning up..."
@@ -344,7 +376,7 @@ jobs:
             echo "The package was pushed successfully, so you can create the release manually if needed."
           fi
 
-      - name: Create pending release in CHANGELOG and push to main
+      - name: Create pending release in CHANGELOG and commit to main
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           CHANGELOG_PATH="Assets/Packages/Hissal/UnityTypeSerializer/CHANGELOG.md"
@@ -398,10 +430,45 @@ jobs:
             
             git commit -m "$COMMIT_MSG"
             
-            echo "Pushing CHANGELOG update to main branch..."
-            git push origin HEAD:main
+            echo "Attempting to push CHANGELOG update to main branch..."
             
-            echo "✓ CHANGELOG updated and pushed to main branch with single commit"
+            # Try direct push first (works if branch protection allows GitHub Actions)
+            if git push origin HEAD:main 2>&1; then
+              echo "✓ CHANGELOG updated and pushed directly to main branch"
+            else
+              echo "⚠ Direct push to main failed (likely due to branch protection)"
+              echo "  Creating a temporary branch and attempting automated merge..."
+              
+              # Create a unique branch name with timestamp
+              TEMP_BRANCH="chore/release-changelog-v${VERSION}-$(date +%s)"
+              
+              # Push to temporary branch
+              git checkout -b "$TEMP_BRANCH"
+              
+              if git push origin "$TEMP_BRANCH" 2>&1; then
+                echo "✓ Pushed changes to branch: $TEMP_BRANCH"
+                echo ""
+                echo "=== Action Required ==="
+                echo "Branch protection prevented automatic update."
+                echo "A branch has been created: $TEMP_BRANCH"
+                echo ""
+                echo "Options:"
+                echo "1. Manually create a PR from $TEMP_BRANCH to main"
+                echo "2. Manually merge the branch if you have admin permissions"
+                echo "3. Update branch protection to allow GitHub Actions bot to push"
+                echo ""
+                echo "To allow GitHub Actions to push in the future, update branch protection rules:"
+                echo "  Settings → Branches → main → Allow specified actors to bypass"
+                echo "  Add: 'github-actions[bot]'"
+              else
+                echo "✗ Failed to push to temporary branch"
+                echo "  The CHANGELOG changes are committed locally but not pushed"
+                echo "  You may need to manually update the CHANGELOG in the repository"
+              fi
+              
+              # Switch back to avoid leaving workflow in weird state
+              git checkout -
+            fi
           else
             echo "✓ No CHANGELOG changes needed"
           fi
