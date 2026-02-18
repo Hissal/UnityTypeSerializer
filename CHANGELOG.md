@@ -2,6 +2,8 @@
 
 ## v ...
 
+- Redesigned `SerializedTypeKind` with expanded type categories (`Class`, `Struct`, `Static`, `Enum`, `Delegate`, `Primitive`, `Object`, `All`), marked `Concrete` obsolete as an alias of `Object`, and updated drawer filtering semantics.
+
 ## v 0.2.1
 - Added `SerializedType.IsValid` property to check if a valid type is set
 - Marked `SerializedType.HasType` as obsolete (use `IsValid` instead)

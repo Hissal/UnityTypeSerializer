@@ -38,11 +38,11 @@ namespace Hissal.UnityTypeSerializer {
         public bool AllowOpenGenerics { get; init; }
 
         /// <summary>
-        /// Controls which kind of types are shown in the dropdown (concrete, abstract, interfaces).
-        /// Default is <see cref="SerializedTypeKind.Concrete"/> only (abstract + interfaces excluded).
-        /// Use bitwise flags to allow multiple kinds (e.g., <c>Concrete | Abstract</c>).
+        /// Controls which kind of types are shown in the dropdown.
+        /// Default is <see cref="SerializedTypeKind.Object"/> only.
+        /// Use bitwise flags to allow multiple kinds (e.g., <c>Object | Abstract</c>).
         /// </summary>
-        public SerializedTypeKind AllowedTypeKinds { get; init; } = SerializedTypeKind.Concrete;
+        public SerializedTypeKind AllowedTypeKinds { get; init; } = SerializedTypeKind.Object;
 
         /// <summary>
         /// Gets or initializes the name of a static or instance member (method, property, or field) that returns

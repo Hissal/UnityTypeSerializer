@@ -80,23 +80,39 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 typesToFilter = typesToFilter.Where(t => !excludedTypes.Contains(t));
             }
             
-            // Get allowed type kinds from options (default to Concrete only)
-            var allowedKinds = options?.AllowedTypeKinds ?? SerializedTypeKind.Concrete;
+            // Get allowed type kinds from options (default to Object only)
+            var allowedKinds = options?.AllowedTypeKinds ?? SerializedTypeKind.Object;
+            bool allowAllTypeKinds = allowedKinds.HasFlag(SerializedTypeKind.All);
 
             return typesToFilter
                 .Where(t => {
-                    // Check type kind filtering
-                    bool isInterface = t.IsInterface;
-                    bool isAbstractClass = t.IsAbstract && !isInterface;
-                    bool isConcreteClass = !t.IsAbstract && !isInterface;
+                    if (!allowAllTypeKinds) {
+                        // Check type kind filtering
+                        bool isInterface = t.IsInterface;
+                        bool isStaticClass = t.IsClass && t.IsAbstract && t.IsSealed;
+                        bool isAbstractClass = t.IsClass && t.IsAbstract && !t.IsSealed;
+                        bool isPrimitive = t.IsPrimitive;
+                        bool isEnum = t.IsEnum;
+                        bool isDelegate = typeof(Delegate).IsAssignableFrom(t) &&
+                                          t != typeof(Delegate) &&
+                                          t != typeof(MulticastDelegate);
+                        bool isClass = t.IsClass && !isStaticClass && !isAbstractClass && !isDelegate;
+                        bool isStruct = t.IsValueType && !isPrimitive && !isEnum;
 
-                    bool passesTypeKindFilter =
-                        (isConcreteClass && allowedKinds.HasFlag(SerializedTypeKind.Concrete)) ||
-                        (isAbstractClass && allowedKinds.HasFlag(SerializedTypeKind.Abstract)) ||
-                        (isInterface && allowedKinds.HasFlag(SerializedTypeKind.Interface));
+                        bool passesTypeKindFilter =
+                            (isClass && allowedKinds.HasFlag(SerializedTypeKind.Class)) ||
+                            (isStruct && allowedKinds.HasFlag(SerializedTypeKind.Struct)) ||
+                            (isAbstractClass && allowedKinds.HasFlag(SerializedTypeKind.Abstract)) ||
+                            (isInterface && allowedKinds.HasFlag(SerializedTypeKind.Interface)) ||
+                            (isStaticClass && allowedKinds.HasFlag(SerializedTypeKind.Static)) ||
+                            (isEnum && allowedKinds.HasFlag(SerializedTypeKind.Enum)) ||
+                            (isDelegate && allowedKinds.HasFlag(SerializedTypeKind.Delegate)) ||
+                            (isPrimitive && allowedKinds.HasFlag(SerializedTypeKind.Primitive)) ||
+                            ((isClass || isStruct) && allowedKinds.HasFlag(SerializedTypeKind.Object));
 
-                    if (!passesTypeKindFilter)
-                        return false;
+                        if (!passesTypeKindFilter)
+                            return false;
+                    }
 
                     // Check generic type definition (e.g., List<>)
                     if (t.IsGenericTypeDefinition)
