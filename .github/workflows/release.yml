@@ -44,6 +44,59 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
       
+      - name: Validate and update CHANGELOG
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CHANGELOG_PATH="Assets/Packages/Hissal/UnityTypeSerializer/CHANGELOG.md"
+          
+          echo "=== Validating CHANGELOG for version $VERSION ==="
+          
+          if [ ! -f "$CHANGELOG_PATH" ]; then
+            echo "✗ Error: CHANGELOG.md not found at $CHANGELOG_PATH"
+            exit 1
+          fi
+          
+          # Read the first few lines to check for version headers
+          HEAD_CONTENT=$(head -n 10 "$CHANGELOG_PATH")
+          
+          # Check Case 1: "## v ..." exists (pending release)
+          if echo "$HEAD_CONTENT" | grep -q "^## v \.\.\.$"; then
+            echo "✓ Case 1: Found pending release marker '## v ...'"
+            echo "  Updating to '## v $VERSION'"
+            
+            # Replace "## v ..." with the actual version
+            sed -i "s/^## v \.\.\.$/## v $VERSION/" "$CHANGELOG_PATH"
+            
+            echo "changelog_updated=true" >> $GITHUB_OUTPUT
+            echo "✓ CHANGELOG updated with version $VERSION"
+            
+          # Check Case 2: Version already exists in changelog
+          elif echo "$HEAD_CONTENT" | grep -q "^## v $VERSION$"; then
+            echo "✓ Case 2: Version $VERSION already exists in CHANGELOG"
+            echo "  No changelog update needed"
+            
+            echo "changelog_updated=false" >> $GITHUB_OUTPUT
+            
+          # Case 3: Neither pending release nor existing version found
+          else
+            echo "✗ Case 3: CHANGELOG validation failed"
+            echo ""
+            echo "Expected one of the following:"
+            echo "  1. A pending release marker: '## v ...'"
+            echo "  2. An existing version header: '## v $VERSION'"
+            echo ""
+            echo "Found instead:"
+            echo "$HEAD_CONTENT"
+            echo ""
+            echo "Please update the CHANGELOG.md before releasing."
+            exit 1
+          fi
+          
+          # Don't commit yet - we'll combine this with the pending release addition
+          # to create a single commit later
+          echo "✓ CHANGELOG changes staged for later commit"
+      
       - name: Validate tag and commit (manual dispatch only)
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -164,7 +217,19 @@ jobs:
           echo "Set git identity"
           
           echo "Creating subtree split for package directory..."
+          
+          # First, we need to commit the CHANGELOG changes temporarily for the split
+          # But we'll amend this later to include the pending release marker
+          if [ "$(git status --porcelain Assets/Packages/Hissal/UnityTypeSerializer/CHANGELOG.md)" ]; then
+            git add Assets/Packages/Hissal/UnityTypeSerializer/CHANGELOG.md
+            git commit -m "temp: changelog update for split"
+            TEMP_COMMIT_CREATED=true
+          else
+            TEMP_COMMIT_CREATED=false
+          fi
+          
           # Create a temporary branch with only the package directory
+          # This will include the CHANGELOG with the correct version (no pending release)
           git subtree split --prefix=Assets/Packages/Hissal/UnityTypeSerializer -b pkg-split
           
           echo "Checking out split branch..."
@@ -176,9 +241,12 @@ jobs:
           jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
           
+          # Commit both package.json and any CHANGELOG changes
           echo "Committing version update..."
-          # Commit the version update
           git add package.json
+          if [ -f CHANGELOG.md ]; then
+            git add CHANGELOG.md
+          fi
           git commit -m "chore: release version $VERSION"
           
           echo ""
@@ -223,6 +291,12 @@ jobs:
           # Switch back to original branch and clean up
           git checkout -
           git branch -D pkg-split
+          
+          # If we created a temp commit, reset it so we can create the combined commit later
+          if [ "$TEMP_COMMIT_CREATED" = "true" ]; then
+            echo "Resetting temp commit to prepare for combined commit..."
+            git reset --soft HEAD~1
+          fi
           
           echo "✓ Successfully pushed package version $VERSION to public repository"
 
@@ -269,3 +343,66 @@ jobs:
             echo ""
             echo "The package was pushed successfully, so you can create the release manually if needed."
           fi
+
+      - name: Create pending release in CHANGELOG and push to main
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CHANGELOG_PATH="Assets/Packages/Hissal/UnityTypeSerializer/CHANGELOG.md"
+          
+          echo "=== Creating combined CHANGELOG commit ==="
+          
+          # At this point, CHANGELOG might have "## v X.Y.Z" from the validation step
+          # We need to add "## v ..." above it, then commit everything together
+          
+          # Check if "## v ..." already exists at the top
+          if head -n 5 "$CHANGELOG_PATH" | grep -q "^## v \.\.\.$"; then
+            echo "✓ Pending release marker already exists at the top"
+            NEEDS_PENDING=false
+          else
+            echo "Adding new pending release marker to CHANGELOG"
+            
+            # Read the entire file and add pending release at the top
+            CHANGELOG_CONTENT=$(<"$CHANGELOG_PATH")
+            
+            # Write the new content with pending release marker
+            {
+              echo "# Changelog"
+              echo ""
+              echo "## v ..."
+              echo ""
+              # Add the rest of the file, skipping the first "# Changelog" line
+              echo "$CHANGELOG_CONTENT" | tail -n +2
+            } > "${CHANGELOG_PATH}.tmp"
+            
+            mv "${CHANGELOG_PATH}.tmp" "$CHANGELOG_PATH"
+            
+            echo "✓ Added pending release marker '## v ...'"
+            NEEDS_PENDING=true
+          fi
+          
+          # Now commit both the version update and the pending release addition in one commit
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [ "$(git status --porcelain $CHANGELOG_PATH)" ]; then
+            git add "$CHANGELOG_PATH"
+            
+            # Create a meaningful commit message
+            if [ "${{ steps.changelog.outputs.changelog_updated }}" = "true" ] && [ "$NEEDS_PENDING" = "true" ]; then
+              COMMIT_MSG="chore: release v$VERSION and prepare CHANGELOG for next release [skip ci]"
+            elif [ "${{ steps.changelog.outputs.changelog_updated }}" = "true" ]; then
+              COMMIT_MSG="chore: release v$VERSION [skip ci]"
+            else
+              COMMIT_MSG="chore: prepare CHANGELOG for next release [skip ci]"
+            fi
+            
+            git commit -m "$COMMIT_MSG"
+            
+            echo "Pushing CHANGELOG update to main branch..."
+            git push origin HEAD:main
+            
+            echo "✓ CHANGELOG updated and pushed to main branch with single commit"
+          else
+            echo "✓ No CHANGELOG changes needed"
+          fi
+
