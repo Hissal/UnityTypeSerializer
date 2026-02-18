@@ -1,6 +1,6 @@
 # Changelog
 
-## v ...
+## v 0.3.0
 
 - Redesigned `SerializedTypeKind` with expanded type categories (`Class`, `Struct`, `Static`, `Enum`, `Delegate`, `Primitive`, `Object`, `All`), marked `Concrete` obsolete as an alias of `Object`, and updated drawer filtering semantics.
 
