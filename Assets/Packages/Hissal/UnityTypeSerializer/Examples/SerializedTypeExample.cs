@@ -111,10 +111,10 @@ namespace Hissal.UnityTypeSerializer.Examples {
         [SerializeField]
         SerializedType<ISerializedTypeExample>? concreteOnlyDefault;
 
-        [InfoBox("AllowedTypeKinds = Concrete | Abstract\n" +
-                 "Shows both concrete classes and abstract classes (interfaces excluded).")]
+        [InfoBox("AllowedTypeKinds = Object | Abstract\n" +
+                 "Shows object-like types and abstract classes (interfaces excluded).")]
         [SerializeField]
-        [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.Concrete | SerializedTypeKind.Abstract)]
+        [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.Object | SerializedTypeKind.Abstract)]
         SerializedType<ISerializedTypeExample>? concreteAndAbstract;
 
         [InfoBox("AllowedTypeKinds = Interface\n" +
@@ -123,10 +123,10 @@ namespace Hissal.UnityTypeSerializer.Examples {
         [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.Interface)]
         SerializedType<ISerializedTypeExample>? interfacesOnly;
 
-        [InfoBox("AllowedTypeKinds = Concrete | Abstract | Interface\n" +
-                 "Shows all types: concrete classes, abstract classes, and interfaces.")]
+        [InfoBox("AllowedTypeKinds = All\n" +
+                 "Shows all supported type kinds.")]
         [SerializeField]
-        [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.Concrete | SerializedTypeKind.Abstract | SerializedTypeKind.Interface)]
+        [SerializedTypeOptions(AllowedTypeKinds = SerializedTypeKind.All)]
         SerializedType<ISerializedTypeExample>? allTypeKinds;
 
         [Title("Basic Options", bold: true)]
