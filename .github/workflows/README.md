@@ -132,9 +132,20 @@ Only the contents of `Assets/Packages/Hissal/UnityTypeSerializer/` directory are
 **Error: "remote public already exists"**
 - The workflow cleans up remotes automatically, but if it fails, the next run will handle it
 
+**Error: "unable to access" or "403 Forbidden"**
+- Authentication failed when pushing to the public repository
+- **Check token validity**: Make sure `PUBLIC_REPO_TOKEN` hasn't expired
+- **Check token permissions**: The token must have the `repo` scope (full control of repositories)
+  - For classic tokens: Enable the `repo` checkbox
+  - For fine-grained tokens: Ensure it has read/write access to the target repository
+- **Check token access**: If using a fine-grained token, make sure it has access to the specific public repository
+- **Check URL format**: `PUBLIC_REPO_URL` should be formatted as `github.com/USERNAME/REPO.git` (no `https://` prefix)
+- **Test the token**: Try cloning/pushing to the public repo manually with the token to verify it works
+
 **Error: "Authentication failed"**
 - Check that `PUBLIC_REPO_TOKEN` is valid and has correct permissions
 - Ensure `PUBLIC_REPO_URL` is correctly formatted (no `https://` prefix)
+- If using a fine-grained token, make sure the repository is included in the token's repository access
 
 
 **Split fails or wrong files are pushed**
