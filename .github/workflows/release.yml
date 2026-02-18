@@ -97,32 +97,71 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
+          # Debug: Show raw inputs
+          echo "=== URL Debugging ==="
+          echo "Raw PUBLIC_REPO_URL: ${PUBLIC_REPO_URL}"
+          echo "Raw PUBLIC_REPO_TOKEN length: ${#PUBLIC_REPO_TOKEN}"
+          
           # Normalize URL - remove .git suffix if present, Git will add it back
           NORMALIZED_URL="${PUBLIC_REPO_URL%.git}"
+          echo "Normalized URL (after removing .git): ${NORMALIZED_URL}"
           
-          # Debug output (token will be masked by GitHub)
-          echo "Repo URL (normalized): ${NORMALIZED_URL}"
+          # Validate URL format
+          if [[ ! "$NORMALIZED_URL" =~ ^github\.com/.+/.+ ]]; then
+            echo "✗ Error: PUBLIC_REPO_URL format is invalid"
+            echo "  Expected: github.com/OWNER/REPO"
+            echo "  Got: ${NORMALIZED_URL}"
+            exit 1
+          fi
+          echo "✓ URL format is valid"
+          
+          # Extract owner/repo for API verification
+          REPO_PATH=$(echo "${NORMALIZED_URL}" | sed 's/github.com\///')
+          echo "Repository path: ${REPO_PATH}"
+          
+          # Verify token has access to the repository
+          echo ""
+          echo "=== Token Verification ==="
           echo "Token present: $([ -n "${PUBLIC_REPO_TOKEN}" ] && echo 'yes' || echo 'no')"
           echo "Token length: ${#PUBLIC_REPO_TOKEN}"
           
-          # Verify token has access to the repository
-          echo "Verifying token access to repository..."
-          # Extract owner/repo from github.com/owner/repo format
-          REPO_PATH=$(echo "${NORMALIZED_URL}" | sed 's/github.com\///')
           if curl -f -H "Authorization: token ${PUBLIC_REPO_TOKEN}" "https://api.github.com/repos/${REPO_PATH}" > /dev/null 2>&1; then
-            echo "✓ Token has access to the repository"
+            echo "✓ Token has access to the repository via API"
           else
             echo "✗ Token cannot access the repository - check token permissions"
             echo "  Attempted to access: ${REPO_PATH}"
             exit 1
           fi
           
-          # Disable any existing credential helpers that might interfere
+          # Construct the authenticated URL
+          AUTH_URL="https://x-access-token:${PUBLIC_REPO_TOKEN}@${NORMALIZED_URL}"
+          echo ""
+          echo "=== Push URL Construction ==="
+          echo "Will push to: https://x-access-token:***@${NORMALIZED_URL}"
+          
+          # Aggressively disable all credential helpers
+          echo ""
+          echo "=== Git Configuration ==="
+          
+          # Clear all git configs that might interfere
           git config --global --unset-all credential.helper || true
+          git config --system --unset-all credential.helper || true
+          git config --local --unset-all credential.helper || true
+          echo "Cleared all credential helpers"
+          
+          # Remove any extraheader configs (set by actions/checkout)
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          echo "Removed GitHub Actions authentication headers"
+          
+          # Show current git config
+          echo "Current git credential config:"
+          git config --list | grep -i credential || echo "  (none)"
+          git config --list | grep -i extraheader || echo "  (none)"
           
           # Set git identity for the commit
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "Set git identity"
           
           echo "Creating subtree split for package directory..."
           # Create a temporary branch with only the package directory
@@ -142,9 +181,33 @@ jobs:
           git add package.json
           git commit -m "chore: release version $VERSION"
           
-          echo "Pushing to public repository..."
-          # Push directly with token in URL - this should override any other auth
-          git -c credential.helper= push "https://x-access-token:${PUBLIC_REPO_TOKEN}@${NORMALIZED_URL}" HEAD:main --force --verbose
+          echo ""
+          echo "=== Pushing to Public Repository ==="
+          echo "Pushing to: https://x-access-token:***@${NORMALIZED_URL}"
+          
+          # Push using the authenticated URL - should work now that we've cleared interfering auth
+          if git push "${AUTH_URL}" HEAD:main --force --verbose 2>&1; then
+            echo "✓ Push successful!"
+          else
+            PUSH_EXIT_CODE=$?
+            echo ""
+            echo "✗ Push failed with exit code: $PUSH_EXIT_CODE"
+            echo ""
+            echo "=== Troubleshooting Information ==="
+            echo "Token length: ${#PUBLIC_REPO_TOKEN}"
+            echo "Repository: ${REPO_PATH}"
+            echo "Push URL format: https://x-access-token:TOKEN@${NORMALIZED_URL}"
+            echo ""
+            echo "The token verified successfully via API, but git push failed."
+            echo "Possible causes:"
+            echo "1. Fine-grained token without 'Contents: Write' permission"
+            echo "2. Branch protection rules on the main branch"
+            echo "3. Repository settings preventing force pushes"
+            echo ""
+            echo "Please check your token permissions at:"
+            echo "https://github.com/settings/tokens"
+            exit 1
+          fi
           
           echo "Cleaning up..."
           # Switch back to original branch and clean up
