@@ -20,23 +20,52 @@ namespace Hissal.UnityTypeSerializer {
         string aqn = string.Empty;
 
         /// <summary>
+        /// Cached type instance to avoid repeated Type.GetType calls.
+        /// </summary>
+        [NonSerialized]
+        Type? cachedType;
+
+        /// <summary>
+        /// Indicates whether a valid type is currently set.
+        /// </summary>
+        /// <remarks>
+        /// This property is obsolete. Use <see cref="IsValid"/> instead.
+        /// </remarks>
+        [Obsolete("Use IsValid instead.")]
+        [MemberNotNullWhen(true, nameof(Type))]
+        public bool HasType => Type != null;
+        
+        /// <summary>
         /// Indicates whether a valid type is currently set.
         /// </summary>
         /// <remarks>
         /// This property uses the <see cref="Type"/> property to determine if a type is set.
         /// </remarks>
         [MemberNotNullWhen(true, nameof(Type))]
-        public bool HasType => Type != null;
+        public bool IsValid => Type != null;
         
         /// <summary>
         /// Gets the serialized type based on the stored assembly-qualified name.
         /// </summary>
         /// <remarks>
         /// Returns <c>null</c> if the assembly-qualified name is empty or invalid.
+        /// The type is looked up each time and cached. Invalid assembly-qualified names will log an error.
         /// </remarks>
         public Type? Type {
-            get => string.IsNullOrEmpty(aqn) ? null : Type.GetType(aqn);
-            internal set => aqn = value?.AssemblyQualifiedName ?? string.Empty;
+            get {
+                if (cachedType != null) return cachedType;
+                if (string.IsNullOrEmpty(aqn)) return null;
+                
+                cachedType = Type.GetType(aqn);
+                if (cachedType == null)
+                    Debug.LogError($"[SerializedType<{typeof(TBase).Name}>] Failed to resolve type from assembly-qualified name: {aqn}");
+                
+                return cachedType;
+            }
+            internal set {
+                cachedType = null;
+                aqn = value?.AssemblyQualifiedName ?? string.Empty;
+            }
         }
     }
     
@@ -61,23 +90,52 @@ namespace Hissal.UnityTypeSerializer {
         string aqn = string.Empty;
 
         /// <summary>
+        /// Cached type instance to avoid repeated Type.GetType calls.
+        /// </summary>
+        [NonSerialized]
+        Type? cachedType;
+
+        /// <summary>
+        /// Indicates whether a valid type is currently set.
+        /// </summary>
+        /// <remarks>
+        /// This property is obsolete. Use <see cref="IsValid"/> instead.
+        /// </remarks>
+        [Obsolete("Use IsValid instead.")]
+        [MemberNotNullWhen(true, nameof(Type))]
+        public bool HasType => Type != null;
+        
+        /// <summary>
         /// Indicates whether a valid type is currently set.
         /// </summary>
         /// <remarks>
         /// This property uses the <see cref="Type"/> property to determine if a type is set.
         /// </remarks>
         [MemberNotNullWhen(true, nameof(Type))]
-        public bool HasType => Type != null;
+        public bool IsValid => Type != null;
         
         /// <summary>
         /// Gets the serialized type based on the stored assembly-qualified name.
         /// </summary>
         /// <remarks>
         /// Returns <c>null</c> if the assembly-qualified name is empty or invalid.
+        /// The type is looked up each time and cached. Invalid assembly-qualified names will log an error.
         /// </remarks>
         public Type? Type {
-            get => string.IsNullOrEmpty(aqn) ? null : Type.GetType(aqn);
-            internal set => aqn = value?.AssemblyQualifiedName ?? string.Empty;
+            get {
+                if (cachedType != null) return cachedType;
+                if (string.IsNullOrEmpty(aqn)) return null;
+                
+                cachedType = Type.GetType(aqn);
+                if (cachedType == null)
+                    Debug.LogError($"[SerializedType] Failed to resolve type from assembly-qualified name: {aqn}");
+                
+                return cachedType;
+            }
+            internal set {
+                cachedType = null;
+                aqn = value?.AssemblyQualifiedName ?? string.Empty;
+            }
         }
     }
 }
