@@ -570,8 +570,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             
             try {
                 isUpdating = true;
-                Accessor.SetSelectedType(newType);
-                Accessor.ApplyChanges();
+                ApplySelectedType(newType);
             } finally {
                 isUpdating = false;
             }
@@ -874,4 +873,3 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
     }
 }
-

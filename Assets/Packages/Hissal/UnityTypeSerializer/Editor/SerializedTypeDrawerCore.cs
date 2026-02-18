@@ -14,6 +14,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
     /// shared between generic and non-generic SerializedType Odin drawers.
     /// </summary>
     internal static class SerializedTypeDrawerCore {
+        static readonly Dictionary<(Type TargetType, string MethodName), MethodInfo?> onTypeChangedMethodCache = new();
+        static readonly HashSet<(Type TargetType, string MethodName)> onTypeChangedWarningCache = new();
+
         /// <summary>
         /// Creates the appropriate drawer implementation based on options.
         /// </summary>
@@ -243,6 +246,77 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 return GenericConstraintCheckResult.VisibleButInvalid(pendingVisibleButInvalidMessage);
 
             return GenericConstraintCheckResult.Valid;
+        }
+
+        internal static void InvokeOnTypeChangedCallback(
+            SerializedTypeOptionsAttribute? options,
+            InspectorProperty property,
+            Type? previousType,
+            Type? newType) {
+
+            if (previousType == newType)
+                return;
+
+            var callbackName = options?.OnTypeChanged;
+            if (string.IsNullOrWhiteSpace(callbackName))
+                return;
+
+            var target = GetDeclaringInstance(property);
+            if (target == null) {
+                Debug.LogWarning($"[SerializedType] Could not invoke OnTypeChanged callback '{callbackName}' because target instance is null.");
+                return;
+            }
+
+            var targetType = target.GetType();
+            var method = ResolveOnTypeChangedMethod(targetType, callbackName);
+            if (method == null)
+                return;
+
+            try {
+                method.Invoke(target, null);
+            }
+            catch (Exception ex) {
+                Debug.LogError($"[SerializedType] Exception while invoking OnTypeChanged callback '{callbackName}' on '{targetType.Name}': {ex}");
+            }
+        }
+
+        static MethodInfo? ResolveOnTypeChangedMethod(Type targetType, string callbackName) {
+            var key = (targetType, callbackName);
+            if (onTypeChangedMethodCache.TryGetValue(key, out var cachedMethod))
+                return cachedMethod;
+
+            const BindingFlags instanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            const BindingFlags staticFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+
+            var instanceMethods = targetType.GetMember(callbackName, MemberTypes.Method, instanceFlags).Cast<MethodInfo>().ToArray();
+            var staticMethods = targetType.GetMember(callbackName, MemberTypes.Method, staticFlags).Cast<MethodInfo>().ToArray();
+
+            var validMethod = instanceMethods.FirstOrDefault(m => m.GetParameters().Length == 0);
+            if (validMethod != null) {
+                onTypeChangedMethodCache[key] = validMethod;
+                return validMethod;
+            }
+
+            if (!onTypeChangedWarningCache.Add(key))
+                return null;
+
+            if (instanceMethods.Length == 0 && staticMethods.Length == 0) {
+                Debug.LogWarning($"[SerializedType] OnTypeChanged callback '{callbackName}' was not found on type '{targetType.Name}'. Expected a parameterless instance method.");
+                return null;
+            }
+
+            if (instanceMethods.Any(m => m.GetParameters().Length > 0)) {
+                Debug.LogWarning($"[SerializedType] OnTypeChanged callback '{callbackName}' on type '{targetType.Name}' must be parameterless.");
+                return null;
+            }
+
+            if (staticMethods.Length > 0) {
+                Debug.LogWarning($"[SerializedType] OnTypeChanged callback '{callbackName}' on type '{targetType.Name}' must be an instance method, not static.");
+                return null;
+            }
+
+            Debug.LogWarning($"[SerializedType] OnTypeChanged callback '{callbackName}' on type '{targetType.Name}' is invalid. Expected a parameterless instance method.");
+            return null;
         }
 
         static bool PassesInheritanceConstraints(Type candidateType, SerializedTypeOptionsAttribute? options) {

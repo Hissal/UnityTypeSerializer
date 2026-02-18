@@ -108,5 +108,12 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // Concrete type is always valid
             return true;
         }
+
+        protected void ApplySelectedType(Type? newType) {
+            var previousType = Accessor.GetSelectedType();
+            Accessor.SetSelectedType(newType);
+            Accessor.ApplyChanges();
+            SerializedTypeDrawerCore.InvokeOnTypeChangedCallback(Options, Property, previousType, newType);
+        }
     }
 }

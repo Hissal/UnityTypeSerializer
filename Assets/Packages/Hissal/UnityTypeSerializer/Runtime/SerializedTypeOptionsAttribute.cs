@@ -62,5 +62,11 @@ namespace Hissal.UnityTypeSerializer {
         /// Candidate type must satisfy AT LEAST ONE of these types (OR bucket).
         /// </summary>
         public Type[]? InheritsOrImplementsAny { get; init; }
+
+        /// <summary>
+        /// Gets or initializes the name of a parameterless instance method to invoke
+        /// after the selected type value changes.
+        /// </summary>
+        public string OnTypeChanged { get; init; } = string.Empty;
     }
 }

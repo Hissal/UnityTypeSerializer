@@ -80,6 +80,7 @@ Both versions:
 | `CustomTypeFilter` | `string` | `""` | Name of member returning `SerializedTypeFilter` or `IEnumerable<Type>` |
 | `InheritsOrImplementsAll` | `Type[]?` | `null` | Types must satisfy ALL these constraints (AND logic) |
 | `InheritsOrImplementsAny` | `Type[]?` | `null` | Types must satisfy AT LEAST ONE constraint (OR logic) |
+| `OnTypeChanged` | `string` | `""` | Name of a parameterless instance callback invoked after selected type changes |
 
 #### Property-Based Configuration
 Uses modern C# init-only properties instead of constructor parameters:
