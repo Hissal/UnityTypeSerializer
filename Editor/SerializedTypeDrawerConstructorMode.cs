@@ -65,32 +65,31 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     if (selectedType != null && selectedType.IsGenericTypeDefinition) {
                         if (allowOpenGenerics && !allowGenericTypeConstruction) {
                             // When only AllowOpenGenerics is true (no construction), immediately assign the open generic
-                            Accessor.SetSelectedType(selectedType);
+                            ApplySelectedType(selectedType);
                             selectedTypeArguments = null;
                         }
                         else if (!allowOpenGenerics && allowGenericTypeConstruction) {
                             // When only AllowGenericTypeConstruction is true (no open generics), force construction
-                            Accessor.SetSelectedType(selectedType);
+                            ApplySelectedType(selectedType);
                             var argCount = selectedType.GetGenericArguments().Length;
                             selectedTypeArguments = new Type[argCount];
                         }
                         else if (allowOpenGenerics && allowGenericTypeConstruction) {
                             // When both are true, assign the open generic (construct button will appear)
-                            Accessor.SetSelectedType(selectedType);
+                            ApplySelectedType(selectedType);
                             selectedTypeArguments = null;
                         }
                         else {
                             // Neither option is enabled - this shouldn't happen
-                            Accessor.SetSelectedType(null);
+                            ApplySelectedType(null);
                             selectedTypeArguments = null;
                         }
                     }
                     else {
                         // Concrete type selected
-                        Accessor.SetSelectedType(selectedType);
+                        ApplySelectedType(selectedType);
                         selectedTypeArguments = null;
                     }
-                    Accessor.ApplyChanges();
                 };
                 selector.ShowInPopup(rect.position);
             }
@@ -190,8 +189,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
                 else {
                     // Clear the type entirely when open generics aren't allowed
-                    Accessor.SetSelectedType(null);
-                    Accessor.ApplyChanges();
+                    ApplySelectedType(null);
                 }
                 
                 selectedTypeArguments = null;
@@ -396,8 +394,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 
                 // All arguments are selected - construct the type
                 var constructedType = openGenericType.MakeGenericType(processedArgs.Cast<Type>().ToArray());
-                Accessor.SetSelectedType(constructedType);
-                Accessor.ApplyChanges();
+                ApplySelectedType(constructedType);
                 selectedTypeArguments = null;
                 constructionState = null;
             }
@@ -495,8 +492,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 GUI.backgroundColor = new Color(0.7f, 0.7f, 0.7f, 0.5f);
                 if (GUILayout.Button("⟲", GUILayout.Width(20), GUILayout.Height(14))) {
                     // Clear the entire construction and reset to allow repicking the root type
-                    Accessor.SetSelectedType(null);
-                    Accessor.ApplyChanges();
+                    ApplySelectedType(null);
                     
                     // Clear all construction state including nested paths
                     if (constructionState != null) {
