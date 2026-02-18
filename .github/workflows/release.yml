@@ -1,0 +1,105 @@
+﻿name: Release Package
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        type: string
+      create_tag:
+        description: 'Create and push tag'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create and push tag (manual dispatch only)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.create_tag == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION="${{ steps.version.outputs.version }}"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Configure Git for public repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add public remote
+        env:
+          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          PUBLIC_REPO_URL: ${{ secrets.PUBLIC_REPO_URL }}
+        run: |
+          git remote add public "https://x-access-token:${PUBLIC_REPO_TOKEN}@${PUBLIC_REPO_URL}"
+
+      - name: Split and push to public repository
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Create a temporary branch with only the package directory
+          git subtree split --prefix=Assets/Packages/Hissal/UnityTypeSerializer -b pkg-split
+          
+          # Checkout the split branch
+          git checkout pkg-split
+          
+          # Update package.json version in the split branch
+          jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          
+          # Commit the version update
+          git add package.json
+          git commit -m "chore: release version $VERSION"
+          
+          # Push to public repository
+          git push public pkg-split:main --force
+          
+          # Switch back to original branch and clean up
+          git checkout -
+          git branch -D pkg-split
+          
+          echo "Successfully pushed package version $VERSION to public repository"
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_tag == 'true')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          body: |
+            Release version ${{ steps.version.outputs.version }}
+            
+            ## Installation
+            Add this package to your Unity project via Package Manager:
+            ```
+            https://github.com/YOUR_PUBLIC_REPO_URL.git
+            ```
