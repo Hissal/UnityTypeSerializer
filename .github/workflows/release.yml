@@ -90,11 +90,6 @@ jobs:
             fi
           fi
 
-      - name: Configure Git for public repository
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Split and push to public repository
         env:
           PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
@@ -109,6 +104,25 @@ jobs:
           echo "Repo URL (normalized): ${NORMALIZED_URL}"
           echo "Token present: $([ -n "${PUBLIC_REPO_TOKEN}" ] && echo 'yes' || echo 'no')"
           echo "Token length: ${#PUBLIC_REPO_TOKEN}"
+          
+          # Verify token has access to the repository
+          echo "Verifying token access to repository..."
+          # Extract owner/repo from github.com/owner/repo format
+          REPO_PATH=$(echo "${NORMALIZED_URL}" | sed 's/github.com\///')
+          if curl -f -H "Authorization: token ${PUBLIC_REPO_TOKEN}" "https://api.github.com/repos/${REPO_PATH}" > /dev/null 2>&1; then
+            echo "✓ Token has access to the repository"
+          else
+            echo "✗ Token cannot access the repository - check token permissions"
+            echo "  Attempted to access: ${REPO_PATH}"
+            exit 1
+          fi
+          
+          # Disable any existing credential helpers that might interfere
+          git config --global --unset-all credential.helper || true
+          
+          # Set git identity for the commit
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           echo "Creating subtree split for package directory..."
           # Create a temporary branch with only the package directory
@@ -129,9 +143,8 @@ jobs:
           git commit -m "chore: release version $VERSION"
           
           echo "Pushing to public repository..."
-          # Push directly using the URL with token
-          # Format: https://x-access-token:TOKEN@github.com/USER/REPO
-          git push "https://x-access-token:${PUBLIC_REPO_TOKEN}@${NORMALIZED_URL}" HEAD:main --force --verbose
+          # Push directly with token in URL - this should override any other auth
+          git -c credential.helper= push "https://x-access-token:${PUBLIC_REPO_TOKEN}@${NORMALIZED_URL}" HEAD:main --force --verbose
           
           echo "Cleaning up..."
           # Switch back to original branch and clean up
