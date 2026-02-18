@@ -209,6 +209,16 @@ jobs:
             exit 1
           fi
           
+          # Also push the tag to the public repository for the release
+          echo ""
+          echo "Pushing tag v${VERSION} to public repository..."
+          if git push "${AUTH_URL}" "v${VERSION}" --force 2>&1; then
+            echo "✓ Tag pushed successfully!"
+          else
+            echo "⚠ Warning: Failed to push tag, but code was pushed successfully"
+            echo "  You may need to create the release manually"
+          fi
+          
           echo "Cleaning up..."
           # Switch back to original branch and clean up
           git checkout -
@@ -216,21 +226,46 @@ jobs:
           
           echo "✓ Successfully pushed package version $VERSION to public repository"
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release in Public Repository
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_tag == 'true')
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: Release v${{ steps.version.outputs.version }}
-          draft: false
-          prerelease: false
-          body: |
-            Release version ${{ steps.version.outputs.version }}
-            
-            ## Installation
-            Add this package to your Unity project via Package Manager:
-            ```
-            https://github.com/YOUR_PUBLIC_REPO_URL.git
-            ```
+          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          PUBLIC_REPO_URL: ${{ secrets.PUBLIC_REPO_URL }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NORMALIZED_URL="${PUBLIC_REPO_URL%.git}"
+          REPO_PATH=$(echo "${NORMALIZED_URL}" | sed 's/github.com\///')
+          
+          echo "Creating release v${VERSION} in public repository: ${REPO_PATH}"
+          
+          # Create release using GitHub API
+          RESPONSE=$(curl -X POST \
+            -H "Authorization: token ${PUBLIC_REPO_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${REPO_PATH}/releases" \
+            -d @- << EOF
+          {
+            "tag_name": "v${VERSION}",
+            "name": "Release v${VERSION}",
+            "body": "Release version ${VERSION}\n\n## Installation\n\nAdd this package to your Unity project via Package Manager:\n\`\`\`\nhttps://${NORMALIZED_URL}\n\`\`\`\n\n## What's Changed\n\nSee the [CHANGELOG](https://github.com/${REPO_PATH}/blob/main/CHANGELOG.md) for details.",
+            "draft": false,
+            "prerelease": false
+          }
+          EOF
+          )
+          
+          # Check if release was created successfully
+          if echo "$RESPONSE" | grep -q '"id"'; then
+            RELEASE_URL=$(echo "$RESPONSE" | grep '"html_url"' | head -1 | cut -d'"' -f4)
+            echo "✓ Release created successfully: ${RELEASE_URL}"
+          else
+            echo "⚠ Warning: Failed to create release"
+            echo "Response: $RESPONSE"
+            echo ""
+            echo "This might be because:"
+            echo "1. A release with this tag already exists"
+            echo "2. The tag doesn't exist in the public repository yet"
+            echo "3. The token doesn't have permission to create releases"
+            echo ""
+            echo "The package was pushed successfully, so you can create the release manually if needed."
+          fi
