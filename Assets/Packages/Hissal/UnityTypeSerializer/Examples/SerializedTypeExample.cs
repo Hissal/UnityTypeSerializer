@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Hissal.UnityTypeSerializer;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Hissal.UnityTypeSerializer.Examples {
     /// <summary>
@@ -10,6 +11,13 @@ namespace Hissal.UnityTypeSerializer.Examples {
     /// Demonstrates various scenarios including deep nesting, multiple constraints, and real-world patterns.
     /// </summary>
     public sealed class SerializedTypeExample : MonoBehaviour {
+        public void Update() {
+            if (Keyboard.current.spaceKey.wasPressedThisFrame) {
+                Debug.Log("[SerializedTypeExample] Space key pressed - logging all type infos...");
+                LogAllTypeInfos();
+            }
+        }
+
         [Title("SerializedType Examples & Tests", bold: true)]
         [InfoBox("This script demonstrates SerializedType capabilities with various test scenarios.\n" +
                  "Use the button below to log type information for all configured fields.")]
@@ -27,6 +35,48 @@ namespace Hissal.UnityTypeSerializer.Examples {
         [SerializedTypeOptions(AllowGenericTypeConstruction = true, DrawerMode = SerializedTypeDrawerMode.Constructor)]
         SerializedType<ISerializedTypeExample>? complexConstructorMode;
         
+        [Title("On Type Changed Callback", bold: true)]
+        [InfoBox("OnTypeChanged callback example - logs type info whenever selection changes.")]
+        [SerializeField]
+        [SerializedTypeOptions(AllowGenericTypeConstruction = true, OnTypeChanged = nameof(OnTypeChanged))]
+        SerializedType<ISerializedTypeExample>? onTypeChangedExample;
+        
+        [SerializeField]
+        [SerializedTypeOptions(
+            DrawerMode = SerializedTypeDrawerMode.Constructor,
+            AllowGenericTypeConstruction = true, 
+            OnTypeChanged = nameof(OnTypeChangedConstructor))]
+        SerializedType<ISerializedTypeExample>? onTypeChangedConstructorExample;
+        
+        void OnTypeChanged() {
+            Debug.Log("[OnTypeChanged] Type selection changed!");
+            if (onTypeChangedExample?.HasType == true) {
+                var type = onTypeChangedExample.Type;
+                var typeDescription = type.IsGenericTypeDefinition 
+                    ? $"{GetFullTypeName(type)} (OPEN GENERIC)" 
+                    : GetFullTypeName(type);
+                
+                Debug.Log($"[OnTypeChanged] New selection: {typeDescription}");
+            }
+            else {
+                Debug.Log("[OnTypeChanged] No type selected");
+            }
+        }
+
+        void OnTypeChangedConstructor() {
+            Debug.Log("[OnTypeChangedConstructor] Type selection changed in constructor mode!");
+            if (onTypeChangedConstructorExample?.HasType == true) {
+                var type = onTypeChangedConstructorExample.Type;
+                var typeDescription = type.IsGenericTypeDefinition 
+                    ? $"{GetFullTypeName(type)} (OPEN GENERIC)" 
+                    : GetFullTypeName(type);
+                
+                Debug.Log($"[OnTypeChangedConstructor] New selection: {typeDescription}");
+            }
+            else {
+                Debug.Log("[OnTypeChangedConstructor] No type selected");
+            }
+        }
         
         [Title("Custom Filtering", bold: true)]
         [SerializeField]
@@ -197,7 +247,7 @@ namespace Hissal.UnityTypeSerializer.Examples {
 
         [Button("Log All Type Infos", ButtonSizes.Large), GUIColor(0.4f, 0.8f, 1f)]
         void LogAllTypeInfos() {
-            Debug.Log("=== SerializedType Test Cases - Type Information ===\n");
+            Debug.LogError("=== SerializedType Test Cases - Type Information ===\n");
             
             LogTypeInfo("Inline Mode (Default)", inlineModeDefault);
             LogTypeInfo("Complex Constructor Mode", complexConstructorMode);
@@ -221,12 +271,12 @@ namespace Hissal.UnityTypeSerializer.Examples {
             LogTypeInfo("Constraint struct Only", constraintStructOnly);
             LogTypeInfo("Constraint class + new()", constraintClassNew);
             
-            Debug.Log("\n=== End of Type Information ===");
+            Debug.LogError("\n=== End of Type Information ===");
         }
 
         void LogTypeInfo<T>(string testName, SerializedType<T>? serializedType) where T : class {
             if (serializedType?.HasType != true) {
-                Debug.Log($"[{testName}] No type selected");
+                Debug.LogError($"[{testName}] No type selected");
                 return;
             }
 
@@ -235,18 +285,18 @@ namespace Hissal.UnityTypeSerializer.Examples {
                 ? $"{GetFullTypeName(type)} (OPEN GENERIC)" 
                 : GetFullTypeName(type);
                 
-            Debug.Log($"[{testName}] Selected: {typeDescription}");
+            Debug.LogError($"[{testName}] Selected: {typeDescription}");
             
             if (type.IsGenericType && !type.IsGenericTypeDefinition) {
                 var genericArgs = type.GetGenericArguments();
-                Debug.Log($"  └─ Generic arguments: {string.Join(", ", System.Array.ConvertAll(genericArgs, GetFullTypeName))}");
-                Debug.Log($"  └─ Nesting depth: {GetNestingDepth(type)}");
+                Debug.LogError($"  └─ Generic arguments: {string.Join(", ", System.Array.ConvertAll(genericArgs, GetFullTypeName))}");
+                Debug.LogError($"  └─ Nesting depth: {GetNestingDepth(type)}");
             }
         }
 
         void LogTypeInfoNonGeneric(string testName, SerializedType? serializedType) {
             if (serializedType?.HasType != true) {
-                Debug.Log($"[{testName}] No type selected");
+                Debug.LogError($"[{testName}] No type selected");
                 return;
             }
 
@@ -255,12 +305,12 @@ namespace Hissal.UnityTypeSerializer.Examples {
                 ? $"{GetFullTypeName(type)} (OPEN GENERIC)" 
                 : GetFullTypeName(type);
                 
-            Debug.Log($"[{testName}] Selected: {typeDescription}");
+            Debug.LogError($"[{testName}] Selected: {typeDescription}");
             
             if (type.IsGenericType && !type.IsGenericTypeDefinition) {
                 var genericArgs = type.GetGenericArguments();
-                Debug.Log($"  └─ Generic arguments: {string.Join(", ", System.Array.ConvertAll(genericArgs, GetFullTypeName))}");
-                Debug.Log($"  └─ Nesting depth: {GetNestingDepth(type)}");
+                Debug.LogError($"  └─ Generic arguments: {string.Join(", ", System.Array.ConvertAll(genericArgs, GetFullTypeName))}");
+                Debug.LogError($"  └─ Nesting depth: {GetNestingDepth(type)}");
             }
         }
 

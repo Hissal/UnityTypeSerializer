@@ -462,31 +462,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Hissal.TypeSerializer::Hissal.TypeSerializer.SerializedTypeExample
   inlineModeDefault:
-    aqn: Hissal.TypeSerializer.MegaWrapper5`5[[Hissal.TypeSerializer.BasicExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.Container`1[[Hissal.TypeSerializer.BasicExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.AdvancedExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.BasicExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.ConcreteExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    aqn: Hissal.UnityTypeSerializer.Examples.Container`1[[Hissal.UnityTypeSerializer.Examples.ConcreteExample,
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   complexConstructorMode:
-    aqn: Hissal.TypeSerializer.Pair`2[[Hissal.TypeSerializer.Triplet`3[[Hissal.TypeSerializer.AdvancedExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.Container`1[[Hissal.TypeSerializer.BasicExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.ConcreteExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.MegaWrapper2`2[[Hissal.TypeSerializer.ConcreteExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.AdvancedExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    aqn: Hissal.UnityTypeSerializer.Examples.Holder`1[[Hissal.UnityTypeSerializer.Examples.Pair`2[[Hissal.UnityTypeSerializer.Examples.ConcreteExample,
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.UnityTypeSerializer.Examples.BasicExample,
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   customFilteredAnyType:
-    aqn: 
+    aqn: Hissal.UnityTypeSerializer.Examples.BasicExample, Hissal.UnityTypeSerializer.Examples,
+      Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   concreteOnlyDefault:
-    aqn: 
+    aqn: Hissal.UnityTypeSerializer.Examples.SimpleType, Hissal.UnityTypeSerializer.Examples,
+      Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   concreteAndAbstract:
-    aqn: 
+    aqn: Hissal.UnityTypeSerializer.Examples.AdvancedExample, Hissal.UnityTypeSerializer.Examples,
+      Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   interfacesOnly:
     aqn: 
   allTypeKinds:
@@ -494,16 +487,18 @@ MonoBehaviour:
   concreteOnly:
     aqn: 
   constructionRequired:
-    aqn: 
+    aqn: Hissal.UnityTypeSerializer.Examples.Pair`2[[Hissal.UnityTypeSerializer.Examples.BasicExample,
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.UnityTypeSerializer.Examples.AdvancedExample,
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   openGenericsAllowed:
-    aqn: Hissal.TypeSerializer.Container`1, Hissal.TypeSerializer, Version=0.0.0.0,
-      Culture=neutral, PublicKeyToken=null
+    aqn: Hissal.UnityTypeSerializer.Examples.Pair`2, Hissal.UnityTypeSerializer.Examples,
+      Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   optionalConstruction:
-    aqn: Hissal.TypeSerializer.Container`1[[Hissal.TypeSerializer.Pair`2[[Hissal.TypeSerializer.ConcreteExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.TypeSerializer.BasicExample,
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
-      Hissal.TypeSerializer, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    aqn: Hissal.UnityTypeSerializer.Examples.Pair`2[[Hissal.UnityTypeSerializer.Examples.Container`1,
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null],[Hissal.UnityTypeSerializer.Examples.ConcreteExample,
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]],
+      Hissal.UnityTypeSerializer.Examples, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   noSelfNesting:
     aqn: 
   selfNestingAllowed:
