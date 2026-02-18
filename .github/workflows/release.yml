@@ -11,10 +11,15 @@ on:
         required: true
         type: string
       create_tag:
-        description: 'Create and push tag'
+        description: 'Create and push tag if it does not exist'
         required: true
         type: boolean
         default: true
+      force_republish:
+        description: 'Force republish even if tag exists on different commit'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   release:
@@ -38,15 +43,52 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
-
-      - name: Create and push tag (manual dispatch only)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.create_tag == 'true'
+      
+      - name: Validate tag and commit (manual dispatch only)
+        if: github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           VERSION="${{ steps.version.outputs.version }}"
-          git tag "v$VERSION"
-          git push origin "v$VERSION"
+          CREATE_TAG="${{ github.event.inputs.create_tag }}"
+          FORCE_REPUBLISH="${{ github.event.inputs.force_republish }}"
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          
+          echo "Current commit: $CURRENT_COMMIT"
+          
+          # Check if tag exists
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            TAG_COMMIT=$(git rev-parse "v$VERSION^{commit}")
+            echo "Tag v$VERSION exists and points to commit: $TAG_COMMIT"
+            
+            if [ "$TAG_COMMIT" = "$CURRENT_COMMIT" ]; then
+              echo "✓ Tag v$VERSION points to current commit - proceeding with republish"
+            else
+              echo "⚠ Tag v$VERSION exists but points to a different commit"
+              echo "  Tag commit:     $TAG_COMMIT"
+              echo "  Current commit: $CURRENT_COMMIT"
+              
+              if [ "$FORCE_REPUBLISH" = "true" ]; then
+                echo "✓ Force republish enabled - proceeding anyway"
+              else
+                echo "✗ Error: Tag exists on different commit and force_republish is not enabled"
+                echo "  Please enable 'force_republish' option or use a different version number"
+                exit 1
+              fi
+            fi
+          else
+            echo "Tag v$VERSION does not exist"
+            
+            if [ "$CREATE_TAG" = "true" ]; then
+              echo "Creating and pushing tag v$VERSION"
+              git tag "v$VERSION"
+              git push origin "v$VERSION"
+              echo "✓ Created and pushed tag v$VERSION"
+            else
+              echo "✗ Error: Tag does not exist and create_tag is disabled"
+              exit 1
+            fi
+          fi
 
       - name: Configure Git for public repository
         run: |

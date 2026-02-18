@@ -53,23 +53,43 @@ Trigger the release manually from GitHub Actions UI or via CLI:
 2. Select `Release Package` workflow
 3. Click `Run workflow`
 4. Enter the version number (e.g., `1.0.0`)
-5. Choose whether to create a tag
+5. Choose whether to create a tag (if it doesn't exist)
+6. Choose whether to force republish (if tag exists on different commit)
 
 **Via GitHub CLI:**
 ```bash
-# With tag creation
+# Create new release with new tag
 gh workflow run release.yml -f version=1.0.0 -f create_tag=true
 
-# Without tag creation
+# Republish existing version (tag points to current commit)
 gh workflow run release.yml -f version=1.0.0 -f create_tag=false
+
+# Force republish even if tag is on different commit
+gh workflow run release.yml -f version=1.0.0 -f force_republish=true
 ```
 
+**Tag Validation Logic:**
+
+The workflow validates tags to prevent accidental version mismatches:
+
+- **Tag doesn't exist**: 
+  - ✓ Creates tag if `create_tag=true`
+  - ✗ Fails if `create_tag=false`
+
+- **Tag exists and points to current commit**:
+  - ✓ Proceeds with republish (safe to re-release)
+
+- **Tag exists but points to different commit**:
+  - ✗ Fails by default (version mismatch protection)
+  - ✓ Proceeds if `force_republish=true` (override safety check)
+
 The workflow will:
-1. Optionally create and push the version tag
-2. Split the package directory using `git subtree`
-3. Update `package.json` with the specified version in the split branch only
-4. Push to the public repository
-5. Create a GitHub release (if tag was created)
+1. Validate the tag and commit relationship (manual dispatch only)
+2. Create tag if needed and allowed
+3. Split the package directory using `git subtree`
+4. Update `package.json` with the specified version in the split branch only
+5. Push to the public repository
+6. Create a GitHub release (if tag was created or already exists)
 
 ### Workflow Details
 
@@ -96,6 +116,18 @@ Only the contents of `Assets/Packages/Hissal/UnityTypeSerializer/` directory are
 - A temporary branch `pkg-split` is created and deleted during the process
 
 ### Troubleshooting
+
+**Error: "Tag exists on different commit and force_republish is not enabled"**
+- This is a safety feature to prevent version mismatches
+- The tag you're trying to release points to a different commit than the current HEAD
+- Solutions:
+  - Use a new version number for the current code
+  - Check out the commit that the tag points to and release from there
+  - Enable `force_republish` if you intentionally want to republish with different code
+
+**Error: "Tag does not exist and create_tag is disabled"**
+- You're trying to publish a version without a tag, but tag creation is disabled
+- Enable `create_tag` option or create the tag manually first
 
 **Error: "remote public already exists"**
 - The workflow cleans up remotes automatically, but if it fails, the next run will handle it
