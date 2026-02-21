@@ -148,8 +148,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (EditorGUI.DropdownButton(rect, new GUIContent(displayName), FocusType.Keyboard)) {
                 if (dropdownItems == null)
                     return;
+                
+                var items = new List<GenericSelectorItem<Type>> { new GenericSelectorItem<Type>("None", null) };
+                items.AddRange(dropdownItems);
                     
-                var selector = new GenericSelector<Type>("Select Type", false, dropdownItems);
+                var selector = new GenericSelector<Type>("Select Type", false, items);
                 selector.SelectionConfirmed += selection => {
                     var selectedType = selection.FirstOrDefault();
                     UpdateValue(selectedType);
@@ -200,6 +203,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
         
         void ShowBaseTypeSelector(DropdownInfo info) {
+            bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             List<GenericSelectorItem<Type>> items;
 
             if (info.Path.Count > 0) {
@@ -207,22 +211,27 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 var genericParam = currentType != null ? GetGenericParameterAtPath(currentType, info.Path) : null;
                 var validTypes = BuildValidTypesForGenericParameter(genericParam, info.Path);
                 items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
+                if (allowOpenGenerics) {
+                    items.Insert(0, new GenericSelectorItem<Type>("None", null));
+                }
             } else {
-                items = dropdownItems;
+                items = new List<GenericSelectorItem<Type>> { new GenericSelectorItem<Type>("None", null) };
+                items.AddRange(dropdownItems);
             }
 
             var selector = new GenericSelector<Type>("Select Type", false, items);
             selector.SelectionConfirmed += selection => {
                 var selectedType = selection.FirstOrDefault();
-                if (selectedType != null) {
-                    if (info.Path.Count == 0) {
-                        // Root level base type - replace entire type
-                        constructionState.Clear();
-                        UpdateValue(selectedType);
-                    } else {
-                        // Nested base type - update at path
-                        UpdateGenericArgumentAtPath(info.Path, selectedType);
-                    }
+                if (info.Path.Count == 0) {
+                    // Root level base type - replace entire type (null clears to None)
+                    constructionState.Clear();
+                    UpdateValue(selectedType);
+                } else if (selectedType != null) {
+                    // Nested base type - update at path
+                    UpdateGenericArgumentAtPath(info.Path, selectedType);
+                } else if (allowOpenGenerics) {
+                    // None selected for nested - clear the argument at path
+                    UpdateGenericArgumentAtPath(info.Path, null);
                 }
             };
             selector.ShowInPopup();
@@ -283,23 +292,29 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 return;
             
             var genericParam = info.GenericParameter ?? genericParams[info.ArgumentIndex.Value];
+            bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
             // Build list of valid types for this generic parameter
             var validTypes = BuildValidTypesForGenericParameter(genericParam, info.Path);
             
             var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
+            if (allowOpenGenerics) {
+                items.Insert(0, new GenericSelectorItem<Type>("None", null));
+            }
             
             var selector = new GenericSelector<Type>($"Select {genericParam.Name}", false, items);
             selector.SelectionConfirmed += selection => {
                 var selectedType = selection.FirstOrDefault();
                 if (selectedType != null) {
                     UpdateGenericArgumentAtPath(info.Path, selectedType);
+                } else if (allowOpenGenerics) {
+                    UpdateGenericArgumentAtPath(info.Path, null);
                 }
             };
             selector.ShowInPopup();
         }
         
-        void UpdateGenericArgumentAtPath(List<int> path, Type newArgumentType) {
+        void UpdateGenericArgumentAtPath(List<int> path, Type? newArgumentType) {
             var currentType = Accessor.GetSelectedType();
             if (currentType == null || path.Count == 0)
                 return;
@@ -322,6 +337,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     
                     args[argIndex] = newArgumentType;
                     
+                    if (newArgumentType == null)
+                        return; // Slot cleared; type stays as open generic definition
+                    
                     // Try to construct the type if we have all arguments
                     bool allSelected = args.All(a => a != null);
                     
@@ -342,15 +360,26 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     if (argIndex >= currentArgs.Length)
                         return;
                     
-                    var newArgs = new Type[currentArgs.Length];
-                    for (int i = 0; i < newArgs.Length; i++) {
-                        newArgs[i] = i == argIndex ? newArgumentType : currentArgs[i];
+                    if (newArgumentType == null) {
+                        // Clearing an arg - transition back to open generic definition
+                        var newArgs = new Type?[currentArgs.Length];
+                        for (int i = 0; i < newArgs.Length; i++) {
+                            newArgs[i] = i == argIndex ? null : (Type?)currentArgs[i];
+                        }
+                        constructionState[genericDefinition] = newArgs;
+                        UpdateValue(genericDefinition);
+                        return;
+                    }
+                    
+                    var newConcreteArgs = new Type[currentArgs.Length];
+                    for (int i = 0; i < newConcreteArgs.Length; i++) {
+                        newConcreteArgs[i] = i == argIndex ? newArgumentType : currentArgs[i];
                     }
                     
                     try {
-                        var constructedType = genericDefinition.MakeGenericType(newArgs);
+                        var constructedType = genericDefinition.MakeGenericType(newConcreteArgs);
                         // Also update construction state
-                        constructionState[genericDefinition] = newArgs;
+                        constructionState[genericDefinition] = newConcreteArgs;
                         UpdateValue(constructedType);
                     } catch {
                         // Construction failed
@@ -404,7 +433,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             }
         }
         
-        Type? UpdateTypeAtPathRecursive(Type currentType, List<int> path, Type newArgumentType) {
+        Type? UpdateTypeAtPathRecursive(Type currentType, List<int> path, Type? newArgumentType) {
             if (path.Count == 0)
                 return newArgumentType;
             
@@ -455,11 +484,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 if (argIndex >= currentArgs.Length)
                     return currentType;
                 
-                var newArgs = new Type[currentArgs.Length];
+                var newArgs = new Type?[currentArgs.Length];
                 for (int i = 0; i < newArgs.Length; i++) {
                     if (i == argIndex) {
                         if (remainingPath.Count > 0) {
-                            newArgs[i] = UpdateTypeAtPathRecursive(currentArgs[i], remainingPath, newArgumentType) ?? currentArgs[i];
+                            newArgs[i] = UpdateTypeAtPathRecursive(currentArgs[i], remainingPath, newArgumentType);
                         } else {
                             newArgs[i] = newArgumentType;
                         }
@@ -468,14 +497,19 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     }
                 }
                 
-                try {
-                    var result = genericDefinition.MakeGenericType(newArgs);
-                    // Update construction state
-                    constructionState[genericDefinition] = newArgs;
-                    return result;
-                } catch {
-                    return currentType;
+                if (newArgs.All(a => a != null)) {
+                    try {
+                        var result = genericDefinition.MakeGenericType(newArgs.Cast<Type>().ToArray());
+                        // Update construction state
+                        constructionState[genericDefinition] = newArgs;
+                        return result;
+                    } catch {
+                        // Construction failed - fall through to return generic definition
+                    }
                 }
+                // Has null args or construction failed - store partial state and return generic definition
+                constructionState[genericDefinition] = newArgs;
+                return genericDefinition;
             }
             
             return currentType;
