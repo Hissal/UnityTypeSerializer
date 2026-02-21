@@ -58,8 +58,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (EditorGUI.DropdownButton(rect, new GUIContent(displayName), FocusType.Keyboard)) {
                 if (dropdownItems == null)
                     return;
+                
+                var items = new List<GenericSelectorItem<Type>> { new GenericSelectorItem<Type>("None", null) };
+                items.AddRange(dropdownItems);
                     
-                var selector = new GenericSelector<Type>("Select Type", false, dropdownItems);
+                var selector = new GenericSelector<Type>("Select Type", false, items);
                 selector.SelectionConfirmed += selection => {
                     var selectedType = selection.FirstOrDefault();
                     if (selectedType != null && selectedType.IsGenericTypeDefinition) {
@@ -86,7 +89,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                         }
                     }
                     else {
-                        // Concrete type selected
+                        // Concrete type selected or None (selectedType == null)
                         ApplySelectedType(selectedType);
                         selectedTypeArguments = null;
                     }
@@ -693,6 +696,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
         void ShowTypeArgumentSelectorRecursive(List<int> path, int argIndex, Type genericParameter, Type?[] targetArgsArray) {
             bool allowSelfNesting = Options?.AllowSelfNesting ?? false;
+            bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
             // Generic argument candidates are filtered only by generic parameter constraints
             // and generic construction rules (self-nesting prevention, etc.).
@@ -746,12 +750,15 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 .OrderBy(t => GetTypeName(t))
                 .ToList();
             
-            var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t));
+            var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
+            if (allowOpenGenerics) {
+                items.Insert(0, new GenericSelectorItem<Type>("None", null));
+            }
             
             var selector = new GenericSelector<Type>($"Select {genericParameter.Name}", false, items);
             selector.SelectionConfirmed += selection => {
                 var selectedType = selection.FirstOrDefault();
-                if (selectedType != null) {
+                if (selectedType != null || allowOpenGenerics) {
                     targetArgsArray[argIndex] = selectedType;
                     constructionState!.SetArguments(path, targetArgsArray);
                 }
