@@ -1,5 +1,7 @@
 # Changelog
 
+## v ...
+
 ## v 0.3.1
 - Added `None` option to `SerializedType` drawers: always visible at the root type dropdown, and visible in nested generic argument dropdowns only when `AllowOpenGenerics` is enabled.
 - Selecting `None` at root clears the serialized type; selecting `None` for a nested generic argument reverts the type to its open generic definition.
