@@ -71,6 +71,13 @@ namespace Hissal.UnityTypeSerializer.Editor {
         protected static string GetTypeName(Type type) {
             return SerializedTypeDrawerUtilities.GetTypeName(type);
         }
+
+        /// <summary>
+        /// Gets the display name for the current selection, distinguishing empty from unresolved values.
+        /// </summary>
+        protected string GetSelectionDisplayName(Type? type) {
+            return SerializedTypeDrawerCore.GetSelectionDisplayName(type, Accessor.GetSerializedAqn());
+        }
         
         /// <summary>
         /// Validates if the current type satisfies the attribute options.
@@ -79,34 +86,13 @@ namespace Hissal.UnityTypeSerializer.Editor {
         /// <param name="errorMessage">Output error message if invalid</param>
         /// <returns>True if valid, false otherwise</returns>
         protected bool ValidateType(Type? type, out string? errorMessage) {
-            errorMessage = null;
-            
-            if (type == null)
-                return true; // No type selected is valid
-            
-            bool allowGenericTypeConstruction = Options?.AllowGenericTypeConstruction ?? false;
-            bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
-            
-            // Check if type is an open generic
-            if (type.IsGenericTypeDefinition) {
-                if (!allowOpenGenerics) {
-                    errorMessage = $"Open generic types are not allowed for this field.\nType '{GetTypeName(type)}' must be fully constructed.";
-                    return false;
-                }
-                return true;
-            }
-            
-            // Check if type contains generic parameters (partially constructed)
-            if (type.ContainsGenericParameters) {
-                if (!allowOpenGenerics) {
-                    errorMessage = $"Types with unresolved generic parameters are not allowed for this field.\nType '{GetTypeName(type)}' contains generic parameters.";
-                    return false;
-                }
-                return true;
-            }
-            
-            // Concrete type is always valid
-            return true;
+            return SerializedTypeDrawerCore.TryValidateSelectedType(
+                type,
+                Accessor.GetSerializedAqn(),
+                Accessor.BaseConstraint,
+                Options,
+                Property,
+                out errorMessage);
         }
 
         protected void ApplySelectedType(Type? newType) {

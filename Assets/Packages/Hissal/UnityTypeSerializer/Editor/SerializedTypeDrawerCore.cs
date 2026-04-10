@@ -5,7 +5,6 @@ using System.Reflection;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
-using Hissal.UnityTypeSerializer;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     /// <summary>
@@ -16,6 +15,81 @@ namespace Hissal.UnityTypeSerializer.Editor {
     internal static class SerializedTypeDrawerCore {
         static readonly Dictionary<(Type TargetType, string MethodName), MethodInfo?> onTypeChangedMethodCache = new();
         static readonly HashSet<(Type TargetType, string MethodName)> onTypeChangedWarningCache = new();
+
+        internal static bool HasInvalidSerializedType(Type? selectedType, string? serializedAqn) {
+            return selectedType == null && !string.IsNullOrEmpty(serializedAqn);
+        }
+
+        internal static string GetSelectionDisplayName(Type? selectedType, string? serializedAqn) {
+            if (selectedType != null)
+                return SerializedTypeDrawerUtilities.GetTypeName(selectedType);
+
+            return HasInvalidSerializedType(selectedType, serializedAqn) ? "Invalid" : "None";
+        }
+
+        internal static bool TryValidateSelectedType(
+            Type? selectedType,
+            string? serializedAqn,
+            Type baseConstraint,
+            SerializedTypeOptionsAttribute? options,
+            InspectorProperty property,
+            out string? errorMessage) {
+
+            errorMessage = null;
+
+            if (selectedType == null) {
+                if (HasInvalidSerializedType(selectedType, serializedAqn)) {
+                    errorMessage = $"Serialized type reference is invalid and could not be resolved.\nAQN: '{serializedAqn}'";
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (!baseConstraint.IsAssignableFrom(selectedType)) {
+                errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is not assignable to '{baseConstraint.Name}'.";
+                return false;
+            }
+
+            bool allowOpenGenerics = options?.AllowOpenGenerics ?? false;
+            if (selectedType.IsGenericTypeDefinition && !allowOpenGenerics) {
+                errorMessage = $"Open generic types are not allowed for this field.\nType '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' must be fully constructed.";
+                return false;
+            }
+
+            if (selectedType.ContainsGenericParameters && !allowOpenGenerics) {
+                errorMessage = $"Types with unresolved generic parameters are not allowed for this field.\nType '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' contains generic parameters.";
+                return false;
+            }
+
+            var allowedKinds = options?.AllowedTypeKinds ?? SerializedTypeKind.Object;
+            if (!PassesTypeKindFilter(selectedType, allowedKinds)) {
+                errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is not allowed by AllowedTypeKinds ({allowedKinds}).";
+                return false;
+            }
+
+            if (!PassesInheritanceConstraints(selectedType, options)) {
+                errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' does not satisfy inheritance/interface constraints configured in SerializedTypeOptions.";
+                return false;
+            }
+
+            var filter = ResolveSerializedTypeFilter(options?.CustomTypeFilter, property);
+            if (filter.HasValue) {
+                var includedTypes = GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToHashSet();
+                if (includedTypes != null && includedTypes.Count > 0 && !MatchesTypeOrGenericDefinition(includedTypes, selectedType)) {
+                    errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is not allowed by CustomTypeFilter include rules.";
+                    return false;
+                }
+
+                var excludedTypes = GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, property)?.ToHashSet();
+                if (excludedTypes != null && excludedTypes.Count > 0 && MatchesTypeOrGenericDefinition(excludedTypes, selectedType)) {
+                    errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is excluded by CustomTypeFilter.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Creates the appropriate drawer implementation based on options.
@@ -86,33 +160,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
             return typesToFilter
                 .Where(t => {
-                    if (!allowAllTypeKinds) {
-                        // Check type kind filtering
-                        bool isInterface = t.IsInterface;
-                        bool isStaticClass = t.IsClass && t.IsAbstract && t.IsSealed;
-                        bool isAbstractClass = t.IsClass && t.IsAbstract && !t.IsSealed;
-                        bool isPrimitive = t.IsPrimitive;
-                        bool isEnum = t.IsEnum;
-                        bool isDelegate = typeof(Delegate).IsAssignableFrom(t) &&
-                                          t != typeof(Delegate) &&
-                                          t != typeof(MulticastDelegate);
-                        bool isClass = t.IsClass && !isStaticClass && !isAbstractClass && !isDelegate;
-                        bool isStruct = t.IsValueType && !isPrimitive && !isEnum;
-
-                        bool passesTypeKindFilter =
-                            (isClass && allowedKinds.HasFlag(SerializedTypeKind.Class)) ||
-                            (isStruct && allowedKinds.HasFlag(SerializedTypeKind.Struct)) ||
-                            (isAbstractClass && allowedKinds.HasFlag(SerializedTypeKind.Abstract)) ||
-                            (isInterface && allowedKinds.HasFlag(SerializedTypeKind.Interface)) ||
-                            (isStaticClass && allowedKinds.HasFlag(SerializedTypeKind.Static)) ||
-                            (isEnum && allowedKinds.HasFlag(SerializedTypeKind.Enum)) ||
-                            (isDelegate && allowedKinds.HasFlag(SerializedTypeKind.Delegate)) ||
-                            (isPrimitive && allowedKinds.HasFlag(SerializedTypeKind.Primitive)) ||
-                            ((isClass || isStruct) && allowedKinds.HasFlag(SerializedTypeKind.Object));
-
-                        if (!passesTypeKindFilter)
-                            return false;
-                    }
+                    if (!allowAllTypeKinds && !PassesTypeKindFilter(t, allowedKinds))
+                        return false;
 
                     // Check generic type definition (e.g., List<>)
                     if (t.IsGenericTypeDefinition)
@@ -123,6 +172,42 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 })
                 .OrderBy(t => SerializedTypeDrawerUtilities.GetTypeName(t))
                 .ToList();
+        }
+
+        static bool MatchesTypeOrGenericDefinition(HashSet<Type> set, Type candidate) {
+            if (set.Contains(candidate))
+                return true;
+
+            if (candidate.IsGenericType && !candidate.IsGenericTypeDefinition) {
+                var genericDef = candidate.GetGenericTypeDefinition();
+                return set.Contains(genericDef);
+            }
+
+            return false;
+        }
+
+        static bool PassesTypeKindFilter(Type type, SerializedTypeKind allowedKinds) {
+            bool isInterface = type.IsInterface;
+            bool isStaticClass = type.IsClass && type.IsAbstract && type.IsSealed;
+            bool isAbstractClass = type.IsClass && type.IsAbstract && !type.IsSealed;
+            bool isPrimitive = type.IsPrimitive;
+            bool isEnum = type.IsEnum;
+            bool isDelegate = typeof(Delegate).IsAssignableFrom(type) &&
+                              type != typeof(Delegate) &&
+                              type != typeof(MulticastDelegate);
+            bool isClass = type.IsClass && !isStaticClass && !isAbstractClass && !isDelegate;
+            bool isStruct = type.IsValueType && !isPrimitive && !isEnum;
+
+            return
+                (isClass && allowedKinds.HasFlag(SerializedTypeKind.Class)) ||
+                (isStruct && allowedKinds.HasFlag(SerializedTypeKind.Struct)) ||
+                (isAbstractClass && allowedKinds.HasFlag(SerializedTypeKind.Abstract)) ||
+                (isInterface && allowedKinds.HasFlag(SerializedTypeKind.Interface)) ||
+                (isStaticClass && allowedKinds.HasFlag(SerializedTypeKind.Static)) ||
+                (isEnum && allowedKinds.HasFlag(SerializedTypeKind.Enum)) ||
+                (isDelegate && allowedKinds.HasFlag(SerializedTypeKind.Delegate)) ||
+                (isPrimitive && allowedKinds.HasFlag(SerializedTypeKind.Primitive)) ||
+                ((isClass || isStruct) && allowedKinds.HasFlag(SerializedTypeKind.Object));
         }
 
         /// <summary>
