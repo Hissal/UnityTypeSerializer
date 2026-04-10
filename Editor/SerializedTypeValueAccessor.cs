@@ -11,6 +11,12 @@ namespace Hissal.UnityTypeSerializer.Editor {
         /// Gets the currently selected type, or null if none is set.
         /// </summary>
         Type? GetSelectedType();
+
+        /// <summary>
+        /// Gets the raw serialized assembly-qualified name.
+        /// Used to detect unresolved type references (invalid serialized values).
+        /// </summary>
+        string GetSerializedAqn();
         
         /// <summary>
         /// Sets the selected type, creating or replacing the backing instance as needed.
@@ -42,6 +48,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
         public Type BaseConstraint => typeof(object);
         
         public Type? GetSelectedType() => valueEntry.SmartValue?.Type;
+
+        public string GetSerializedAqn() => valueEntry.SmartValue?.SerializedAqn ?? string.Empty;
         
         public void SetSelectedType(Type? type) {
             var value = valueEntry.SmartValue;
@@ -68,6 +76,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
         public Type BaseConstraint => typeof(TBase);
         
         public Type? GetSelectedType() => valueEntry.SmartValue?.Type;
+
+        public string GetSerializedAqn() => valueEntry.SmartValue?.SerializedAqn ?? string.Empty;
         
         public void SetSelectedType(Type? type) {
             var value = valueEntry.SmartValue;

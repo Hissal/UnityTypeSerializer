@@ -38,6 +38,17 @@ namespace Hissal.UnityTypeSerializer.Editor {
             bool allowGenericTypeConstruction = Options?.AllowGenericTypeConstruction ?? false;
             bool allowOpenGenerics = Options?.AllowOpenGenerics ?? false;
             
+#if !ODIN_VALIDATOR
+            // Validate the current type (Only when !ODIN_VALIDATOR as the validator also draws the info box)
+            string? errorMessage;
+            bool isValid = ValidateType(currentType, out errorMessage);
+
+            // Draw error message if invalid
+            if (!isValid && !string.IsNullOrEmpty(errorMessage)) {
+                EditorGUILayout.HelpBox(errorMessage, MessageType.Error);
+            }
+#endif
+            
             // Check if we're in active construction mode
             bool isConstructing = currentType != null && currentType.IsGenericTypeDefinition 
                 && selectedTypeArguments != null;
@@ -53,7 +64,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             var rect = EditorGUILayout.GetControlRect(true, GUILayout.ExpandWidth(true));
             rect = EditorGUI.PrefixLabel(rect, label);
 
-            var displayName = currentType != null ? GetTypeName(currentType) : "None";
+            var displayName = GetSelectionDisplayName(currentType);
             
             if (EditorGUI.DropdownButton(rect, new GUIContent(displayName), FocusType.Keyboard)) {
                 if (dropdownItems == null)

@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer {
+    
     /// <summary>
     /// Represents a fully serializable, inspector-constructible representation of a type that derives from a specified base class or interface.
     /// By default, only concrete, non-generic types are included. Abstract types, interfaces, and generic type definitions are excluded.
@@ -18,6 +19,12 @@ namespace Hissal.UnityTypeSerializer {
         /// </summary>
         [SerializeField, HideInInspector] 
         string aqn = string.Empty;
+
+        /// <summary>
+        /// Gets the raw serialized assembly-qualified name.
+        /// Exposed for editor-time diagnostics and validation.
+        /// </summary>
+        internal string SerializedAqn => aqn;
 
         /// <summary>
         /// Cached type instance to avoid repeated Type.GetType calls.
@@ -49,7 +56,7 @@ namespace Hissal.UnityTypeSerializer {
         /// </summary>
         /// <remarks>
         /// Returns <c>null</c> if the assembly-qualified name is empty or invalid.
-        /// The type is looked up each time and cached. Invalid assembly-qualified names will log an error.
+        /// The type is looked up each time and cached.
         /// </remarks>
         public Type? Type {
             get {
@@ -57,9 +64,7 @@ namespace Hissal.UnityTypeSerializer {
                 if (string.IsNullOrEmpty(aqn)) return null;
                 
                 cachedType = Type.GetType(aqn);
-                if (cachedType == null)
-                    Debug.LogError($"[SerializedType<{typeof(TBase).Name}>] Failed to resolve type from assembly-qualified name: {aqn}");
-                
+
                 return cachedType;
             }
             internal set {
@@ -90,6 +95,12 @@ namespace Hissal.UnityTypeSerializer {
         string aqn = string.Empty;
 
         /// <summary>
+        /// Gets the raw serialized assembly-qualified name.
+        /// Exposed for editor-time diagnostics and validation.
+        /// </summary>
+        internal string SerializedAqn => aqn;
+
+        /// <summary>
         /// Cached type instance to avoid repeated Type.GetType calls.
         /// </summary>
         [NonSerialized]
@@ -119,7 +130,7 @@ namespace Hissal.UnityTypeSerializer {
         /// </summary>
         /// <remarks>
         /// Returns <c>null</c> if the assembly-qualified name is empty or invalid.
-        /// The type is looked up each time and cached. Invalid assembly-qualified names will log an error.
+        /// The type is looked up each time and cached.
         /// </remarks>
         public Type? Type {
             get {
@@ -127,9 +138,7 @@ namespace Hissal.UnityTypeSerializer {
                 if (string.IsNullOrEmpty(aqn)) return null;
                 
                 cachedType = Type.GetType(aqn);
-                if (cachedType == null)
-                    Debug.LogError($"[SerializedType] Failed to resolve type from assembly-qualified name: {aqn}");
-                
+
                 return cachedType;
             }
             internal set {

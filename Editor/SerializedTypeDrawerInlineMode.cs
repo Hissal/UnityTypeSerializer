@@ -56,14 +56,16 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 lastRebuiltType = currentType;
             }
             
-            // Validate the current type
+#if !ODIN_VALIDATOR
+            // Validate the current type (Only when !ODIN_VALIDATOR as the validator also draws the info box)
             string? errorMessage;
             bool isValid = ValidateType(currentType, out errorMessage);
-            
+
             // Draw error message if invalid
             if (!isValid && !string.IsNullOrEmpty(errorMessage)) {
                 EditorGUILayout.HelpBox(errorMessage, MessageType.Error);
             }
+#endif
             
             // Draw the inline type selector
             EditorGUILayout.BeginHorizontal();
@@ -143,7 +145,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
         
         void DrawBaseTypeDropdown(Rect rect, Type? currentType) {
-            var displayName = currentType != null ? GetTypeName(currentType) : "None";
+            var displayName = GetSelectionDisplayName(currentType);
             
             if (EditorGUI.DropdownButton(rect, new GUIContent(displayName), FocusType.Keyboard)) {
                 if (dropdownItems == null)
