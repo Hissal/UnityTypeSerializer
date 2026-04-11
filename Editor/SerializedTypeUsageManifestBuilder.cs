@@ -17,8 +17,6 @@ namespace Hissal.UnityTypeSerializer.Editor {
         [MenuItem("Tools/SerializedType/Rebuild Usage Manifest")]
         static void RebuildManifestMenu() {
             if (RebuildManifest()) {
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
                 Debug.Log("[SerializedType] Rebuilt SerializedType usage manifest.");
             }
             else {
@@ -27,55 +25,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
 
         internal static bool RebuildManifest() {
-            var manifest = GetOrCreateManifestAsset();
             var usageEntries = CollectUsageEntries();
             SortUsageEntries(usageEntries);
-
-            var hasEntryChanges = !AreEntriesEqual(manifest.Entries, usageEntries);
-            var generatedAtUtc = hasEntryChanges
-                ? DateTime.UtcNow.ToString("O")
-                : manifest.GeneratedAtUtc;
-
-            if (hasEntryChanges) {
-                manifest.SetData(generatedAtUtc, usageEntries);
-                EditorUtility.SetDirty(manifest);
-            }
-
-            var hasXmlChanges = WriteAnalyzerManifestXml(usageEntries, generatedAtUtc);
-            return hasEntryChanges || hasXmlChanges;
-        }
-
-        static SerializedTypeUsageManifest GetOrCreateManifestAsset() {
-            var manifestAssetPath = SerializedTypeUsageManifestPaths.ManifestAssetPath;
-            var manifest = AssetDatabase.LoadAssetAtPath<SerializedTypeUsageManifest>(manifestAssetPath);
-            if (manifest != null)
-                return manifest;
-
-            var folderPath = Path.GetDirectoryName(manifestAssetPath)?.Replace('\\', '/');
-            if (string.IsNullOrEmpty(folderPath)) {
-                throw new InvalidOperationException("Unable to resolve manifest asset folder path.");
-            }
-
-            if (!AssetDatabase.IsValidFolder(folderPath)) {
-                EnsureFolderHierarchy(folderPath);
-            }
-
-            manifest = ScriptableObject.CreateInstance<SerializedTypeUsageManifest>();
-            AssetDatabase.CreateAsset(manifest, manifestAssetPath);
-            return manifest;
-        }
-
-        static void EnsureFolderHierarchy(string folderPath) {
-            var parts = folderPath.Split('/');
-            var current = parts[0];
-            for (var i = 1; i < parts.Length; i++) {
-                var next = current + "/" + parts[i];
-                if (!AssetDatabase.IsValidFolder(next)) {
-                    AssetDatabase.CreateFolder(current, parts[i]);
-                }
-
-                current = next;
-            }
+            return WriteAnalyzerManifestXml(usageEntries);
         }
 
         static List<SerializedTypeUsageEntry> CollectUsageEntries() {
@@ -133,57 +85,6 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 return compare;
 
             return CompareSequence(a.InheritsOrImplementsAllMetadataNames, b.InheritsOrImplementsAllMetadataNames);
-        }
-
-        static bool AreEntriesEqual(IReadOnlyList<SerializedTypeUsageEntry> left, IReadOnlyList<SerializedTypeUsageEntry> right) {
-            if (ReferenceEquals(left, right))
-                return true;
-
-            if (left.Count != right.Count)
-                return false;
-
-            for (var i = 0; i < left.Count; i++) {
-                var a = left[i];
-                var b = right[i];
-
-                if (!AreEntryFieldsEqual(a, b))
-                    return false;
-            }
-
-            return true;
-        }
-
-        static bool AreEntryFieldsEqual(SerializedTypeUsageEntry a, SerializedTypeUsageEntry b) {
-            return string.Equals(a.DeclaringAssembly, b.DeclaringAssembly, StringComparison.Ordinal) &&
-                   string.Equals(a.DeclaringType, b.DeclaringType, StringComparison.Ordinal) &&
-                   string.Equals(a.FieldName, b.FieldName, StringComparison.Ordinal) &&
-                   string.Equals(a.BaseConstraint, b.BaseConstraint, StringComparison.Ordinal) &&
-                   string.Equals(a.BaseConstraintMetadataName, b.BaseConstraintMetadataName, StringComparison.Ordinal) &&
-                   a.AllowOpenGenerics == b.AllowOpenGenerics &&
-                   a.AllowedTypeKinds == b.AllowedTypeKinds &&
-                   ArrayEquals(a.InheritsOrImplementsAll, b.InheritsOrImplementsAll) &&
-                   ArrayEquals(a.InheritsOrImplementsAny, b.InheritsOrImplementsAny) &&
-                   ArrayEquals(a.InheritsOrImplementsAllMetadataNames, b.InheritsOrImplementsAllMetadataNames) &&
-                   ArrayEquals(a.InheritsOrImplementsAnyMetadataNames, b.InheritsOrImplementsAnyMetadataNames) &&
-                   string.Equals(a.CustomTypeFilter, b.CustomTypeFilter, StringComparison.Ordinal);
-        }
-
-        static bool ArrayEquals(string[] left, string[] right) {
-            if (ReferenceEquals(left, right))
-                return true;
-
-            if (left == null || right == null)
-                return false;
-
-            if (left.Length != right.Length)
-                return false;
-
-            for (var i = 0; i < left.Length; i++) {
-                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
-                    return false;
-            }
-
-            return true;
         }
 
         static int CompareSequence(IReadOnlyList<string> left, IReadOnlyList<string> right) {
@@ -260,33 +161,20 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return type.FullName ?? type.Name;
         }
 
-        static bool WriteAnalyzerManifestXml(IReadOnlyList<SerializedTypeUsageEntry> entries, string generatedAtUtc) {
-            var manifestXmlPath = SerializedTypeUsageManifestPaths.ManifestXmlPath;
-            var folderPath = Path.GetDirectoryName(manifestXmlPath)?.Replace('\\', '/');
-            if (string.IsNullOrEmpty(folderPath)) {
+        static bool WriteAnalyzerManifestXml(IReadOnlyList<SerializedTypeUsageEntry> entries) {
+            var manifestXmlPath = SerializedTypeUsageManifestPaths.ManifestXmlDiskPath;
+            var folderPath = Path.GetDirectoryName(manifestXmlPath);
+            if (string.IsNullOrEmpty(folderPath))
                 throw new InvalidOperationException("Unable to resolve manifest xml folder path.");
-            }
 
-            if (!AssetDatabase.IsValidFolder(folderPath)) {
-                EnsureFolderHierarchy(folderPath);
-            }
-
-            var document = new XDocument(
-                new XElement("SerializedTypeUsageManifest",
-                    new XAttribute("generatedAtUtc", generatedAtUtc),
-                    entries.Select(entry => new XElement(
-                        "Entry",
-                        new XAttribute("baseConstraint", entry.BaseConstraintMetadataName ?? string.Empty),
-                        new XAttribute("allowOpenGenerics", entry.AllowOpenGenerics),
-                        new XAttribute("allowedTypeKinds", entry.AllowedTypeKinds),
-                        new XAttribute("inheritsAll", string.Join(";", entry.InheritsOrImplementsAllMetadataNames ?? Array.Empty<string>())),
-                        new XAttribute("inheritsAny", string.Join(";", entry.InheritsOrImplementsAnyMetadataNames ?? Array.Empty<string>())),
-                        new XAttribute("customTypeFilter", entry.CustomTypeFilter ?? string.Empty)))));
+            Directory.CreateDirectory(folderPath);
 
             if (File.Exists(manifestXmlPath)) {
                 try {
                     var existingDocument = XDocument.Load(manifestXmlPath);
-                    if (XNode.DeepEquals(existingDocument, document))
+                    var existingGeneratedAtUtc = (string?)existingDocument.Root?.Attribute("generatedAtUtc") ?? string.Empty;
+                    var unchangedCandidate = BuildManifestDocument(entries, existingGeneratedAtUtc);
+                    if (XNode.DeepEquals(existingDocument, unchangedCandidate))
                         return false;
                 }
                 catch {
@@ -294,8 +182,24 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
             }
 
-            document.Save(manifestXmlPath);
+            var generatedAtUtc = DateTime.UtcNow.ToString("O");
+            var updatedDocument = BuildManifestDocument(entries, generatedAtUtc);
+            updatedDocument.Save(manifestXmlPath);
             return true;
+        }
+
+        static XDocument BuildManifestDocument(IReadOnlyList<SerializedTypeUsageEntry> entries, string generatedAtUtc) {
+            return new XDocument(
+                new XElement("SerializedTypeUsageManifest",
+                    new XAttribute("generatedAtUtc", generatedAtUtc),
+                    entries.Select(entry => new XElement(
+                        "Entry",
+                        new XAttribute("baseConstraint", entry.BaseConstraintMetadataName),
+                        new XAttribute("allowOpenGenerics", entry.AllowOpenGenerics),
+                        new XAttribute("allowedTypeKinds", entry.AllowedTypeKinds),
+                        new XAttribute("inheritsAll", string.Join(";", entry.InheritsOrImplementsAllMetadataNames)),
+                        new XAttribute("inheritsAny", string.Join(";", entry.InheritsOrImplementsAnyMetadataNames)),
+                        new XAttribute("customTypeFilter", entry.CustomTypeFilter)))));
         }
     }
 }

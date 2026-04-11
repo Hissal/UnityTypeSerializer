@@ -18,7 +18,7 @@
 
 Cross-assembly checks use the generated Unity manifest:
 
-- `Assets/_Project/Editor/Generated/SerializedTypeUsageManifest.xml`
+- `Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml`
 
 The analyzer reads this file (by name) from analyzer additional files and, in Unity fallback scenarios, from disk.
 

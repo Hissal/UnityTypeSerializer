@@ -14,6 +14,7 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
     const string SERIALIZED_TYPE_ID_ATTRIBUTE_METADATA_NAME = "Hissal.UnityTypeSerializer.SerializedTypeIdAttribute";
     const string SERIALIZED_TYPE_OPTIONS_ATTRIBUTE_METADATA_NAME = "Hissal.UnityTypeSerializer.SerializedTypeOptionsAttribute";
     const string SERIALIZED_TYPE_USAGE_MANIFEST_FILE_NAME = "SerializedTypeUsageManifest.xml";
+    const string MANIFEST_FALLBACK_RELATIVE_PATH = "Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml";
 
     const int TYPE_KIND_CLASS = 1 << 0;
     const int TYPE_KIND_STRUCT = 1 << 1;
@@ -199,49 +200,13 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
 
         var directoryInfo = new global::System.IO.DirectoryInfo(currentDirectory);
         while (directoryInfo is not null) {
-            var directPackageCandidate = global::System.IO.Path.Combine(
-                directoryInfo.FullName,
-                "Editor",
-                "Generated",
-                SERIALIZED_TYPE_USAGE_MANIFEST_FILE_NAME);
-            if (global::System.IO.File.Exists(directPackageCandidate))
-                return directPackageCandidate;
-
-            var assetsRootCandidate = TryFindManifestInRootFolder(global::System.IO.Path.Combine(directoryInfo.FullName, "Assets"));
-            if (!string.IsNullOrEmpty(assetsRootCandidate))
-                return assetsRootCandidate;
-
-            var packagesRootCandidate = TryFindManifestInRootFolder(global::System.IO.Path.Combine(directoryInfo.FullName, "Packages"));
-            if (!string.IsNullOrEmpty(packagesRootCandidate))
-                return packagesRootCandidate;
+            var libraryCandidate = global::System.IO.Path.Combine(directoryInfo.FullName, MANIFEST_FALLBACK_RELATIVE_PATH);
+            if (global::System.IO.File.Exists(libraryCandidate))
+                return libraryCandidate;
 
             directoryInfo = directoryInfo.Parent;
         }
 
-        return null;
-    }
-
-    static string? TryFindManifestInRootFolder(string rootFolderPath) {
-        if (!global::System.IO.Directory.Exists(rootFolderPath))
-            return null;
-
-        global::System.Collections.Generic.IEnumerable<string> packageFolders;
-        try {
-            packageFolders = global::System.IO.Directory.EnumerateDirectories(rootFolderPath);
-        }
-        catch {
-            return null;
-        }
-
-        foreach (var packageFolder in packageFolders) {
-            var candidatePath = global::System.IO.Path.Combine(
-                packageFolder,
-                "Editor",
-                "Generated",
-                SERIALIZED_TYPE_USAGE_MANIFEST_FILE_NAME);
-            if (global::System.IO.File.Exists(candidatePath))
-                return candidatePath;
-        }
 
         return null;
     }

@@ -1,5 +1,8 @@
 # Changelog
 
+## v 0.4.2
+- Moved `SerializedTypeUsageManifest.xml` generation to `Library/Hissal/UnityTypeSerializer/` so package imports no longer modify immutable package files.
+
 ## v 0.4.1
 - Updated `Examples/SerializedTypeExample.cs` input handling to avoid a hard Input System dependency by using `#if ENABLE_INPUT_SYSTEM` and falling back to legacy input (`ENABLE_LEGACY_INPUT_MANAGER`) for the space-key log action.
 
@@ -11,7 +14,6 @@
 - Added Odin validators for `SerializedType` values and global duplicate id validation (`SerializedTypeIdUniquenessValidator`) under `#if ODIN_VALIDATOR`.
 - Added Roslyn generator/analyzer/code-fix pipeline (`SerializedTypeGenerators`) with diagnostics: `STG001` (duplicate id), `STG100` (likely missing id), `STG101` (non-GUID id).
 - Added serialized-usage manifest generation (`SerializedTypeUsageManifest.xml`) so analyzers can evaluate `SerializedType<>` constraints across assemblies.
-
 
 ## v 0.3.2
 - Added shared selected-type validation in editor core so inspector drawers and Odin Validator use the same validity rules.
