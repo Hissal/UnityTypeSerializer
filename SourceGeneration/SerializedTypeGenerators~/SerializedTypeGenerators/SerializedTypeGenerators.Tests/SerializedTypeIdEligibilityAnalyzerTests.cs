@@ -297,6 +297,75 @@ namespace Demo {
     }
 
     [Fact]
+    public async Task AllowedTypeKindsClassIncludesClassButNotStruct() {
+        var source = @"
+namespace Demo {
+    public interface IFoo { }
+    public sealed class FooClass : IFoo { }
+    public struct FooStruct : IFoo { }
+
+    public sealed class Holder {
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(AllowedTypeKinds = Hissal.UnityTypeSerializer.SerializedTypeKind.Class)]
+        private Hissal.UnityTypeSerializer.SerializedType<IFoo> classFoo = new();
+    }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.FooClass", System.StringComparison.Ordinal));
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.FooStruct", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AllowedTypeKindsStructIncludesStructButNotClass() {
+        var source = @"
+namespace Demo {
+    public interface IFoo { }
+    public sealed class FooClass : IFoo { }
+    public struct FooStruct : IFoo { }
+
+    public sealed class Holder {
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(AllowedTypeKinds = Hissal.UnityTypeSerializer.SerializedTypeKind.Struct)]
+        private Hissal.UnityTypeSerializer.SerializedType<IFoo> structFoo = new();
+    }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.FooClass", System.StringComparison.Ordinal));
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.FooStruct", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AllowedTypeKindsObjectIncludesClassAndStruct() {
+        var source = @"
+namespace Demo {
+    public interface IFoo { }
+    public sealed class FooClass : IFoo { }
+    public struct FooStruct : IFoo { }
+
+    public sealed class Holder {
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(AllowedTypeKinds = Hissal.UnityTypeSerializer.SerializedTypeKind.Object)]
+        private Hissal.UnityTypeSerializer.SerializedType<IFoo> objectFoo = new();
+    }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.FooClass", System.StringComparison.Ordinal));
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.FooStruct", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task PropagatesGenericParameterConstraintTypesFromLikelySerializableGenericType() {
         var source = @"
 namespace Demo {

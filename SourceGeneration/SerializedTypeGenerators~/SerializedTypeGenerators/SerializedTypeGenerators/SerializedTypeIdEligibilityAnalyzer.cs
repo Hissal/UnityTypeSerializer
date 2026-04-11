@@ -653,7 +653,7 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         if (isPrimitive && (allowedTypeKinds & TYPE_KIND_PRIMITIVE) != 0)
             return true;
 
-        return (isClass || isStruct) && (allowedTypeKinds & TYPE_KIND_OBJECT) != 0;
+        return (isClass || isStruct) && (allowedTypeKinds & TYPE_KIND_OBJECT) == TYPE_KIND_OBJECT;
     }
 
     static bool IsPrimitiveSpecialType(SpecialType specialType) {
