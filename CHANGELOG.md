@@ -1,5 +1,8 @@
 # Changelog
 
+## v 0.4.1
+- Updated `Examples/SerializedTypeExample.cs` input handling to avoid a hard Input System dependency by using `#if ENABLE_INPUT_SYSTEM` and falling back to legacy input (`ENABLE_LEGACY_INPUT_MANAGER`) for the space-key log action.
+
 ## v 0.4.0
 - Added `SerializedTypeIdAttribute` and `SerializedTypeIdRegistry` for stable id-based type resolution that survives type/assembly-qualified-name churn.
 - Added full serialized type-tree persistence (`typeId` + `aqn` + nested generic nodes) with runtime fallback order: type tree -> type id -> legacy AQN.

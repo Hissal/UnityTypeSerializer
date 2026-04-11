@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using Hissal.UnityTypeSerializer;
 using Sirenix.OdinInspector;
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+#endif
 
 namespace Hissal.UnityTypeSerializer.Examples {
     /// <summary>
@@ -12,10 +14,20 @@ namespace Hissal.UnityTypeSerializer.Examples {
     /// </summary>
     public sealed class SerializedTypeExample : MonoBehaviour {
         public void Update() {
-            if (Keyboard.current.spaceKey.wasPressedThisFrame) {
+            if (WasLogKeyPressedThisFrame()) {
                 Debug.Log("[SerializedTypeExample] Space key pressed - logging all type infos...");
                 LogAllTypeInfos();
             }
+        }
+
+        static bool WasLogKeyPressedThisFrame() {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            return Input.GetKeyDown(KeyCode.Space);
+#else
+            return false;
+#endif
         }
 
         [Title("SerializedType Examples & Tests", bold: true)]
