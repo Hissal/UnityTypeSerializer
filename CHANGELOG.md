@@ -1,5 +1,8 @@
 # Changelog
 
+## v 0.4.5
+- Fixed `STSG100` treating both type kinds `Class` and `Struct` as `Object`.
+
 ## v 0.4.4
 - Improved `STG100` analyzer eligibility checks so external manifest constraints are still processed when runtime contracts are not referenced locally.
 - Added resilient `SerializedTypeId` attribute detection paths for unresolved symbols, including both short/long attribute names and metadata names.
