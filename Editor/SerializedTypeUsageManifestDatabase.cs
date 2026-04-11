@@ -18,6 +18,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             foreach (var element in root.Elements("Entry")) {
                 var entry = new SerializedTypeUsageEntry {
                     BaseConstraintMetadataName = (string?)element.Attribute("baseConstraint") ?? string.Empty,
+                    AllowGenericTypeConstruction = bool.TryParse((string?)element.Attribute("allowGenericTypeConstruction"), out var allowGenericTypeConstruction) && allowGenericTypeConstruction,
                     AllowOpenGenerics = bool.TryParse((string?)element.Attribute("allowOpenGenerics"), out var allowOpenGenerics) && allowOpenGenerics,
                     AllowedTypeKinds = int.TryParse((string?)element.Attribute("allowedTypeKinds"), out var allowedTypeKinds) ? allowedTypeKinds : 0,
                     InheritsOrImplementsAllMetadataNames = SplitConstraintList((string?)element.Attribute("inheritsAll")),
@@ -51,4 +52,3 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
     }
 }
-

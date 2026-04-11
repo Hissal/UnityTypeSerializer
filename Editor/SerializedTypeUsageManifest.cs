@@ -10,6 +10,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         public string FieldName = string.Empty;
         public string BaseConstraint = string.Empty;
         public string BaseConstraintMetadataName = string.Empty;
+        public bool AllowGenericTypeConstruction;
         public bool AllowOpenGenerics;
         public int AllowedTypeKinds;
         public string[] InheritsOrImplementsAll = Array.Empty<string>();
@@ -35,4 +36,3 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
     }
 }
-

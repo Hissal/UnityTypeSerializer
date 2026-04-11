@@ -365,7 +365,9 @@ namespace Hissal.UnityTypeSerializer.Examples {
     [SerializedTypeId("9aa7e154-b9a4-4fb3-94d2-70264716b425")]
     public interface ISerializedTypeExample { }
 
+
     // Real-world pattern interfaces
+
     public interface IDamageEffect { }
     public interface IRepository { }
     public interface IStrategy { }
@@ -378,7 +380,7 @@ namespace Hissal.UnityTypeSerializer.Examples {
     // ============================================================================
     // BASIC TEST TYPES - Concrete implementations
     // ============================================================================
-    
+
     [SerializedTypeId("d76694a7-cd8a-4a92-b123-c441afbf66a8")]
     public sealed class BasicExample : ISerializedTypeExample { }
     [SerializedTypeId("99a88135-33b0-4449-9bed-7333024a64fa")]
@@ -465,15 +467,24 @@ namespace Hissal.UnityTypeSerializer.Examples {
     // ============================================================================
 
     // Element types
+    [SerializedTypeId("c76144e6-4e97-4a2b-a210-099bdf6b52a7")]
     public sealed class FireElement : IElement { }
+
+    [SerializedTypeId("f5cc8fd7-307f-4fea-a0a6-74e682f4849d")]
     public sealed class IceElement : IElement { }
+
+    [SerializedTypeId("92354040-a026-46e3-b364-5f720673263f")]
     public sealed class LightningElement : IElement { }
+
+    [SerializedTypeId("533cfbf6-af44-4c80-b5ba-dd1af7b78561")]
     public sealed class PhysicalElement : IElement { }
+
+    [SerializedTypeId("48ab77c4-2e74-4f75-8875-8e6f88b2e3f9")]
     public sealed class BurningElement : IElement { }
 
-    [SerializedTypeId("9fe30de9-d454-4fc8-9b20-8c68ddc8b940")]
 
     // Concrete damage types
+    [SerializedTypeId("9fe30de9-d454-4fc8-9b20-8c68ddc8b940")]
     public sealed class FireDamage : IDamageEffect { }
 
     [SerializedTypeId("7d82e8fc-6d97-4331-b6c0-c284f18a9b0d")]
@@ -485,103 +496,149 @@ namespace Hissal.UnityTypeSerializer.Examples {
     [SerializedTypeId("eebf4f8d-33f9-4632-a814-98b3dc00be1b")]
     public sealed class PureDamage : IDamageEffect { }
 
+
     // Generic damage types
-    public sealed class ElementalDamage<TElement> : IDamageEffect 
-        where TElement : IElement 
+    [SerializedTypeId("8203e1d9-ae95-4f3f-b247-f4ca26947910")]
+    public sealed class ElementalDamage<TElement> : IDamageEffect
+            where TElement : IElement
     { }
-    
-    public sealed class DualElementDamage<TElement1, TElement2> : IDamageEffect 
-        where TElement1 : IElement 
-        where TElement2 : IElement 
+
+    [SerializedTypeId("ff6a81df-a577-4d2d-9281-56297b30a516")]
+    public sealed class DualElementDamage<TElement1, TElement2> : IDamageEffect
+            where TElement1 : IElement
+            where TElement2 : IElement
     { }
-    
-    public sealed class TripleElementDamage<TElement1, TElement2, TElement3> : IDamageEffect 
-        where TElement1 : IElement 
-        where TElement2 : IElement 
-        where TElement3 : IElement 
+
+    [SerializedTypeId("7ab7ef28-1b94-4d11-9019-7a595cb189df")]
+    public sealed class TripleElementDamage<TElement1, TElement2, TElement3> : IDamageEffect
+            where TElement1 : IElement
+            where TElement2 : IElement
+            where TElement3 : IElement
     { }
-    
+
+
     // Nested damage wrapper
-    public sealed class DamageWrapper<TDamage> : IDamageEffect 
-        where TDamage : IDamageEffect 
+    [SerializedTypeId("0bf02ee9-ae96-40d3-a501-563e09da0733")]
+    public sealed class DamageWrapper<TDamage> : IDamageEffect
+            where TDamage : IDamageEffect
     { }
-    
-    public sealed class DamageCombo<TDamage1, TDamage2> : IDamageEffect 
-        where TDamage1 : IDamageEffect 
-        where TDamage2 : IDamageEffect 
+
+    [SerializedTypeId("cae21d85-08f7-4b68-99ef-013c728f59b0")]
+    public sealed class DamageCombo<TDamage1, TDamage2> : IDamageEffect
+            where TDamage1 : IDamageEffect
+            where TDamage2 : IDamageEffect
     { }
-    
+
+
     // Complex nested types for deep testing
-    public sealed class ComplexDamage<T1, T2, T3> : IDamageEffect 
-        where T1 : IDamageEffect 
-        where T2 : IDamageEffect 
-        where T3 : IDamageEffect 
+    [SerializedTypeId("499308a9-6560-4a7f-948a-9abce8401410")]
+    public sealed class ComplexDamage<T1, T2, T3> : IDamageEffect
+            where T1 : IDamageEffect
+            where T2 : IDamageEffect
+            where T3 : IDamageEffect
     { }
+
 
     // ============================================================================
     // REAL-WORLD SCENARIO 2: REPOSITORY PATTERN
     // ============================================================================
-    
+
+    [SerializedTypeId("6395657c-d76e-4d00-ada0-27c54333f69b")]
     public sealed class PlayerData : IData { }
+
+    [SerializedTypeId("da2f16ab-515f-46f4-8460-5dec97b5c6a2")]
     public sealed class EnemyData : IData { }
+
+    [SerializedTypeId("ccd49eb4-4901-4be9-8454-68fc00c7f623")]
     public sealed class ItemData : IData { }
-    
+
+    [SerializedTypeId("76360814-843a-4474-924e-e703f2292825")]
     public sealed class HealthStat : IStat { }
+
+    [SerializedTypeId("498cac55-4518-4586-be9a-540da8f70737")]
     public sealed class ManaStat : IStat { }
+
+    [SerializedTypeId("e63777de-06b5-4aa9-9cfd-4de2c5c0bf33")]
     public sealed class StaminaStat : IStat { }
-    
+
+
     // Generic repository
-    public sealed class Repository<TData> : IRepository 
-        where TData : class, IData 
+    [SerializedTypeId("f4958d84-5fbf-47aa-9f6a-c07ff7ffcbf0")]
+    public sealed class Repository<TData> : IRepository
+            where TData : class, IData
     { }
-    
+
+
     // Generic data with stats
-    public sealed class StatData<TStat> : IData 
-        where TStat : IStat 
+    [SerializedTypeId("15b82c06-e718-434f-b1c3-25c2317bcb03")]
+    public sealed class StatData<TStat> : IData
+            where TStat : IStat
     { }
-    
+
+
     // Nested repository example: Repository<StatData<HealthStat>>
-    public sealed class AdvancedRepository<TData, TStat> : IRepository 
-        where TData : IData 
-        where TStat : IStat 
+    [SerializedTypeId("c0a568c5-04f1-47b7-84eb-280909b7c8a0")]
+    public sealed class AdvancedRepository<TData, TStat> : IRepository
+            where TData : IData
+            where TStat : IStat
     { }
-    
-    public sealed class CachedRepository<TData> : IRepository 
-        where TData : class, IData 
+
+    [SerializedTypeId("1c7f6bd4-4094-4ec0-a977-96e4e26ee374")]
+    public sealed class CachedRepository<TData> : IRepository
+            where TData : class, IData
     { }
+
 
     // ============================================================================
     // REAL-WORLD SCENARIO 3: STRATEGY PATTERN
     // ============================================================================
-    
+
+    [SerializedTypeId("c3bd79b2-884e-48fa-9176-a1fd376b7323")]
     public sealed class DamageCalculation : ICalculation { }
+
+    [SerializedTypeId("8ebcf5d3-be61-4998-af88-83298f1e4082")]
     public sealed class HealingCalculation : ICalculation { }
+
+    [SerializedTypeId("03f29ac5-6b94-4d59-91eb-62a5b2cf00ed")]
     public sealed class DefenseCalculation : ICalculation { }
-    
+
+    [SerializedTypeId("49d672c9-b524-45bf-9611-b3a2aeff284d")]
     public sealed class CriticalModifier : IModifier { }
+
+    [SerializedTypeId("94fb39c4-2432-49e7-a64e-eea371e75c76")]
     public sealed class ArmorModifier : IModifier { }
+
+    [SerializedTypeId("af09ceca-9ece-4613-8d6c-481a14a558c4")]
     public sealed class SpeedModifier : IModifier { }
-    
+
+
     // Generic strategy
-    public sealed class Strategy<TCalculation> : IStrategy 
-        where TCalculation : ICalculation 
+    [SerializedTypeId("1360f9d3-41e8-4316-b723-642c0a0497a9")]
+    public sealed class Strategy<TCalculation> : IStrategy
+            where TCalculation : ICalculation
     { }
-    
+
+
     // Generic calculation with modifier
-    public sealed class ModifiedCalculation<TModifier> : ICalculation 
-        where TModifier : IModifier 
+    [SerializedTypeId("e17e3823-bfc7-4cfb-acab-c04ee0ef8186")]
+    public sealed class ModifiedCalculation<TModifier> : ICalculation
+            where TModifier : IModifier
     { }
-    
+
+
     // Nested strategy example: Strategy<ModifiedCalculation<CriticalModifier>>
-    public sealed class ComplexStrategy<TCalc, TMod> : IStrategy 
-        where TCalc : ICalculation 
-        where TMod : IModifier 
+    [SerializedTypeId("115cf5fe-1f12-41ee-a93e-d1b132a1a722")]
+    public sealed class ComplexStrategy<TCalc, TMod> : IStrategy
+            where TCalc : ICalculation
+            where TMod : IModifier
     { }
-    
-    public sealed class ChainedStrategy<TStrat1, TStrat2> : IStrategy 
-        where TStrat1 : IStrategy 
-        where TStrat2 : IStrategy 
+
+    [SerializedTypeId("325a69e4-14b1-4234-877d-e6a6b79f37cb")]
+    public sealed class ChainedStrategy<TStrat1, TStrat2> : IStrategy
+            where TStrat1 : IStrategy
+            where TStrat2 : IStrategy
     { }
+
 
     // ============================================================================
     // GENERIC CONSTRAINT EXAMPLES
@@ -590,6 +647,7 @@ namespace Hissal.UnityTypeSerializer.Examples {
     // ============================================================================
 
     /// <summary>Shared marker interface for constraint example types.</summary>
+    [SerializedTypeId("6a62c107-3f50-496d-b9ba-539622a1fe4b")]
     public interface IConstraintExample { }
 
     /// <summary>Concrete class implementing <see cref="IConstraintExample"/>.</summary>
@@ -601,28 +659,33 @@ namespace Hissal.UnityTypeSerializer.Examples {
     public struct ConstraintStructImpl : IConstraintExample { }
 
     /// <summary>Interface-only constraint: <c>where T : IConstraintExample</c>.</summary>
+    [SerializedTypeId("40e87b72-44d3-475a-be39-7af3fea25102")]
     public sealed class ConstraintInterface<T> : IConstraintExample
-        where T : IConstraintExample
+            where T : IConstraintExample
     { }
 
     /// <summary>Interface + new() constraint: <c>where T : IConstraintExample, new()</c>.</summary>
+    [SerializedTypeId("4cb7d5bb-9a34-4b79-8ab3-5d0cb9a01a15")]
     public sealed class ConstraintNew<T> : IConstraintExample
-        where T : IConstraintExample, new()
+            where T : IConstraintExample, new()
     { }
 
+    [SerializedTypeId("fef15494-971d-4329-91c7-66e64ccba64f")]
     /// <summary>Class + interface constraint: <c>where T : class, IConstraintExample</c>.</summary>
     public sealed class ConstraintClass<T> : IConstraintExample
-        where T : class, IConstraintExample
+            where T : class, IConstraintExample
     { }
 
+    [SerializedTypeId("cb5f2105-9077-42b1-a026-11d3702fc8c4")]
     /// <summary>Struct + interface constraint: <c>where T : struct, IConstraintExample</c>.</summary>
     public sealed class ConstraintStruct<T> : IConstraintExample
-        where T : struct, IConstraintExample
+            where T : struct, IConstraintExample
     { }
 
+    [SerializedTypeId("a016c2e7-463a-437f-85fd-d7bf1e82ac3e")]
     /// <summary>Struct wrapper with interface constraint: <c>where T : IConstraintExample</c> (struct itself).</summary>
     public struct ConstraintStructWrapper<T> : IConstraintExample
-        where T : IConstraintExample
+            where T : IConstraintExample
     { }
 
     /// <summary>
@@ -635,13 +698,15 @@ namespace Hissal.UnityTypeSerializer.Examples {
         public ConstraintNoDefaultConstructor(int value) { _ = value; }
     }
 
+    [SerializedTypeId("8346060b-fe08-43d3-b4f1-e741c329d475")]
     /// <summary>Class + interface + new() constraint: <c>where T : class, IConstraintExample, new()</c>.</summary>
     public sealed class ConstraintClassNew<T> : IConstraintExample
-        where T : class, IConstraintExample, new()
+            where T : class, IConstraintExample, new()
     { }
 
+    [SerializedTypeId("d35e8882-769b-4ddc-8468-211057083635")]
     /// <summary>Struct + interface + new() constraint: <c>where T : struct, IConstraintExample</c> (new() implied).</summary>
     public sealed class ConstraintStructNew<T> : IConstraintExample
-        where T : struct, IConstraintExample
+            where T : struct, IConstraintExample
     { }
 }

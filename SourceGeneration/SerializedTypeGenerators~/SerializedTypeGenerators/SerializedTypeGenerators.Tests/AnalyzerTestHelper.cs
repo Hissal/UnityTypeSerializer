@@ -20,6 +20,7 @@ namespace Hissal.UnityTypeSerializer {
 
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
     public sealed class SerializedTypeOptionsAttribute : Attribute {
+        public bool AllowGenericTypeConstruction { get; init; }
         public bool AllowOpenGenerics { get; init; }
         public SerializedTypeKind AllowedTypeKinds { get; init; } = SerializedTypeKind.Object;
         public Type[] InheritsOrImplementsAll { get; init; }
@@ -43,6 +44,7 @@ namespace Hissal.UnityTypeSerializer {
     }
 
     public sealed class SerializedType<TBase> where TBase : class { }
+    public sealed class SerializedType { }
 }
 ";
 
@@ -72,4 +74,3 @@ internal sealed class InMemoryAdditionalText(string path, string content) : Addi
 
     public override SourceText GetText(CancellationToken cancellationToken = default) => _text;
 }
-

@@ -1,5 +1,12 @@
 # Changelog
 
+## v 0.4.3
+- Improved `STG100` eligibility analysis to include significantly more likely serialized types.
+- Added support for non-generic `SerializedType` usage in `STG100` analysis when constraints are provided via `SerializedTypeOptions`.
+- Updated constraint matching to combine all configured constraint sources: generic base constraint (`SerializedType<TBase>`), `InheritsOrImplementsAll`, and `InheritsOrImplementsAny`.
+- Fixed generic type detection so `AllowGenericTypeConstruction = true` now enables generic-type eligibility analysis even when `AllowOpenGenerics` is `false`.
+- Added generic-argument constraint propagation for serializable generic types (for example `where T : IInterface`) so interface-constrained argument candidates are also considered and warned by `STG100`.
+
 ## v 0.4.2
 - Moved `SerializedTypeUsageManifest.xml` generation to `Library/Hissal/UnityTypeSerializer/` so package imports no longer modify immutable package files.
 
