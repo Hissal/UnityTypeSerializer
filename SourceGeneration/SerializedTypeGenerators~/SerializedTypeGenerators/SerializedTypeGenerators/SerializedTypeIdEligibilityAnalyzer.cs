@@ -36,18 +36,8 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         isEnabledByDefault: true
     );
 
-    static readonly DiagnosticDescriptor s_nonGuidSerializedTypeIdDescriptor = new(
-        id: "STG101",
-        title: "SerializedTypeId should use GUID format",
-        messageFormat: "SerializedTypeId value '{0}' is not a GUID. Consider using a generated GUID for long-term stability.",
-        category: "SerializedTypeGenerators",
-        defaultSeverity: DiagnosticSeverity.Info,
-        isEnabledByDefault: true
-    );
-
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
-        s_missingSerializedTypeIdDescriptor,
-        s_nonGuidSerializedTypeIdDescriptor);
+        s_missingSerializedTypeIdDescriptor);
 
     public override void Initialize(AnalysisContext context) {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
@@ -88,8 +78,6 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         ImmutableArray<FieldConstraint> constraints,
         SymbolAnalysisContext context) {
 
-        ReportNonGuidSerializedTypeId(namedType, serializedTypeIdAttributeSymbol, context);
-
         if (!HasSourceLocation(namedType))
             return;
 
@@ -112,32 +100,6 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             namedType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)));
     }
 
-    static void ReportNonGuidSerializedTypeId(
-        INamedTypeSymbol namedType,
-        INamedTypeSymbol serializedTypeIdAttributeSymbol,
-        SymbolAnalysisContext context) {
-
-        if (TryGetSerializedTypeIdAttributeData(namedType, serializedTypeIdAttributeSymbol) is not AttributeData attributeData)
-            return;
-
-        var typeId = GetSerializedTypeIdValue(attributeData);
-        if (string.IsNullOrWhiteSpace(typeId))
-            return;
-
-        var normalizedTypeId = typeId!.Trim();
-        if (Guid.TryParse(normalizedTypeId, out _))
-            return;
-
-        var location = attributeData.ApplicationSyntaxReference?.GetSyntax(context.CancellationToken).GetLocation()
-            ?? namedType.Locations.FirstOrDefault(l => l.IsInSource);
-        if (location is null)
-            return;
-
-        context.ReportDiagnostic(Diagnostic.Create(
-            s_nonGuidSerializedTypeIdDescriptor,
-            location,
-            typeId));
-    }
 
     static ImmutableArray<FieldConstraint> CollectFieldConstraints(
         INamespaceSymbol rootNamespace,

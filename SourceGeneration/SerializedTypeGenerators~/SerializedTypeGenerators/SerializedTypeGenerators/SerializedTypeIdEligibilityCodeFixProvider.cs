@@ -22,7 +22,7 @@ public sealed class SerializedTypeIdEligibilityCodeFixProvider : CodeFixProvider
     const string SERIALIZED_TYPE_ID_ATTRIBUTE_QUALIFIED_NAME = "Hissal.UnityTypeSerializer.SerializedTypeId";
     const string UNITY_TYPE_SERIALIZER_NAMESPACE = "Hissal.UnityTypeSerializer";
 
-    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create("STG100", "STG101");
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create("STG100");
 
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -32,28 +32,19 @@ public sealed class SerializedTypeIdEligibilityCodeFixProvider : CodeFixProvider
             return;
 
         foreach (var diagnostic in context.Diagnostics) {
-            if (diagnostic.Id == "STG100") {
-                var declaration = FindTargetDeclaration(root, diagnostic.Location.SourceSpan);
-                if (declaration is null)
-                    continue;
-
-                context.RegisterCodeFix(
-                    CodeAction.Create(
-                        title: "Add SerializedTypeId with generated GUID",
-                        createChangedDocument: cancellationToken => AddSerializedTypeIdAttributeAsync(context.Document, root, declaration, cancellationToken),
-                        equivalenceKey: "AddSerializedTypeIdWithGeneratedGuid"),
-                    diagnostic);
+            if (diagnostic.Id != "STG100")
                 continue;
-            }
 
-            if (diagnostic.Id == "STG101") {
-                context.RegisterCodeFix(
-                    CodeAction.Create(
-                        title: "Replace SerializedTypeId with generated GUID",
-                        createChangedDocument: cancellationToken => ReplaceSerializedTypeIdWithGeneratedGuidAsync(context.Document, root, diagnostic, cancellationToken),
-                        equivalenceKey: "ReplaceSerializedTypeIdWithGeneratedGuid"),
-                    diagnostic);
-            }
+            var declaration = FindTargetDeclaration(root, diagnostic.Location.SourceSpan);
+            if (declaration is null)
+                continue;
+
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    title: "Add SerializedTypeId with generated GUID",
+                    createChangedDocument: cancellationToken => AddSerializedTypeIdAttributeAsync(context.Document, root, declaration, cancellationToken),
+                    equivalenceKey: "AddSerializedTypeIdWithGeneratedGuid"),
+                diagnostic);
         }
     }
 
@@ -98,38 +89,6 @@ public sealed class SerializedTypeIdEligibilityCodeFixProvider : CodeFixProvider
         return await Task.FromResult(updatedDocument);
     }
 
-    static async Task<Document> ReplaceSerializedTypeIdWithGeneratedGuidAsync(
-        Document document,
-        SyntaxNode root,
-        Diagnostic diagnostic,
-        CancellationToken cancellationToken) {
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var attributeSyntax = FindAttributeSyntax(root, diagnostic.Location.SourceSpan);
-        if (attributeSyntax is null)
-            return document;
-
-        var existingArgument = attributeSyntax.ArgumentList?.Arguments.FirstOrDefault();
-        if (existingArgument is null)
-            return document;
-
-        var generatedGuidLiteral = SyntaxFactory.LiteralExpression(
-            SyntaxKind.StringLiteralExpression,
-            SyntaxFactory.Literal(Guid.NewGuid().ToString("D")));
-
-        var updatedArgument = existingArgument.WithExpression(generatedGuidLiteral);
-        var updatedAttribute = attributeSyntax.ReplaceNode(existingArgument, updatedArgument)
-            .WithAdditionalAnnotations(Formatter.Annotation);
-
-        var updatedRoot = root.ReplaceNode(attributeSyntax, updatedAttribute);
-        return await Task.FromResult(document.WithSyntaxRoot(updatedRoot));
-    }
-
-    static AttributeSyntax? FindAttributeSyntax(SyntaxNode root, TextSpan locationSpan) {
-        var node = root.FindNode(locationSpan, getInnermostNodeForTie: true);
-        return node.FirstAncestorOrSelf<AttributeSyntax>();
-    }
 
     static SyntaxNode? FindTargetDeclaration(SyntaxNode root, TextSpan locationSpan) {
         var node = root.FindNode(locationSpan, getInnermostNodeForTie: true);
