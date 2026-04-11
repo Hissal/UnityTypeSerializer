@@ -1,5 +1,10 @@
 # Changelog
 
+## v 0.4.4
+- Improved `STG100` analyzer eligibility checks so external manifest constraints are still processed when runtime contracts are not referenced locally.
+- Added resilient `SerializedTypeId` attribute detection paths for unresolved symbols, including both short/long attribute names and metadata names.
+- Added analyzer test coverage for no-runtime-contract scenarios and updated test helpers to support explicitly excluding runtime contracts.
+
 ## v 0.4.3
 - Improved `STG100` eligibility analysis to include significantly more likely serialized types.
 - Added support for non-generic `SerializedType` usage in `STG100` analysis when constraints are provided via `SerializedTypeOptions`.

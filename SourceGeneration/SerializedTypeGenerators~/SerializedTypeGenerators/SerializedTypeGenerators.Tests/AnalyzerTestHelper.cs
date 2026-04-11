@@ -51,14 +51,21 @@ namespace Hissal.UnityTypeSerializer {
     internal static async Task<ImmutableArray<Diagnostic>> GetAnalyzerDiagnosticsAsync(
         string source,
         ImmutableArray<DiagnosticAnalyzer> analyzers,
-        ImmutableArray<AdditionalText> additionalTexts = default) {
+        ImmutableArray<AdditionalText> additionalTexts = default,
+        bool includeRuntimeContracts = true) {
+
+        var syntaxTrees = includeRuntimeContracts
+            ? new[] {
+                CSharpSyntaxTree.ParseText(RuntimeContractsSource),
+                CSharpSyntaxTree.ParseText(source)
+            }
+            : new[] {
+                CSharpSyntaxTree.ParseText(source)
+            };
 
         var compilation = CSharpCompilation.Create(
             assemblyName: "AnalyzerTests",
-            syntaxTrees: new[] {
-                CSharpSyntaxTree.ParseText(RuntimeContractsSource),
-                CSharpSyntaxTree.ParseText(source)
-            },
+            syntaxTrees: syntaxTrees,
             references: new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 

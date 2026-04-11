@@ -126,6 +126,67 @@ namespace Demo {
     }
 
     [Fact]
+    public async Task ReportsWarningFromExternalManifestConstraintsWithoutRuntimeContractsReference() {
+        var source = @"
+namespace Demo {
+    public interface IService { }
+    public sealed class ServiceImpl : IService { }
+}
+";
+
+        var manifestXml = @"
+<SerializedTypeUsageManifest generatedAtUtc=""2026-04-11T00:00:00.0000000Z"">
+  <Entry baseConstraint=""Demo.IService"" allowOpenGenerics=""false"" allowedTypeKinds=""3"" inheritsAll="""" inheritsAny="""" customTypeFilter="""" />
+</SerializedTypeUsageManifest>
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new InMemoryAdditionalText(
+                "SerializedTypeUsageManifest.xml",
+                manifestXml)),
+            includeRuntimeContracts: false);
+
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.ServiceImpl", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DoesNotReportWhenSerializedTypeIdAttributeExistsByNameWithoutRuntimeContractsReference() {
+        var source = @"
+namespace Hissal.UnityTypeSerializer {
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Interface | System.AttributeTargets.Enum | System.AttributeTargets.Delegate)]
+    public sealed class SerializedTypeIdAttribute : System.Attribute {
+        public SerializedTypeIdAttribute(string id) { }
+    }
+}
+
+namespace Demo {
+    public interface IService { }
+
+    [Hissal.UnityTypeSerializer.SerializedTypeId(""service"")]
+    public sealed class ServiceImpl : IService { }
+}
+";
+
+        var manifestXml = @"
+<SerializedTypeUsageManifest generatedAtUtc=""2026-04-11T00:00:00.0000000Z"">
+  <Entry baseConstraint=""Demo.IService"" allowOpenGenerics=""false"" allowedTypeKinds=""3"" inheritsAll="""" inheritsAny="""" customTypeFilter="""" />
+</SerializedTypeUsageManifest>
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new InMemoryAdditionalText(
+                "SerializedTypeUsageManifest.xml",
+                manifestXml)),
+            includeRuntimeContracts: false);
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100");
+    }
+
+    [Fact]
     public async Task IgnoresUnconstrainedNonGenericSerializedTypeField() {
         var source = @"
 namespace Demo {

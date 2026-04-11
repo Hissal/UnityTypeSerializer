@@ -13,6 +13,8 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
     const string SERIALIZED_TYPE_NON_GENERIC_METADATA_NAME = "Hissal.UnityTypeSerializer.SerializedType";
     const string SERIALIZED_TYPE_GENERIC_METADATA_NAME = "Hissal.UnityTypeSerializer.SerializedType`1";
     const string SERIALIZED_TYPE_ID_ATTRIBUTE_METADATA_NAME = "Hissal.UnityTypeSerializer.SerializedTypeIdAttribute";
+    const string SERIALIZED_TYPE_ID_ATTRIBUTE_NAME = "SerializedTypeIdAttribute";
+    const string SERIALIZED_TYPE_ID_SHORT_ATTRIBUTE_NAME = "SerializedTypeId";
     const string SERIALIZED_TYPE_OPTIONS_ATTRIBUTE_METADATA_NAME = "Hissal.UnityTypeSerializer.SerializedTypeOptionsAttribute";
     const string SERIALIZED_TYPE_USAGE_MANIFEST_FILE_NAME = "SerializedTypeUsageManifest.xml";
     const string MANIFEST_FALLBACK_RELATIVE_PATH = "Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml";
@@ -51,37 +53,33 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             var serializedTypeOptionsAttributeSymbol = startContext.Compilation.GetTypeByMetadataName(SERIALIZED_TYPE_OPTIONS_ATTRIBUTE_METADATA_NAME);
             var objectTypeSymbol = startContext.Compilation.GetSpecialType(SpecialType.System_Object);
 
-            if (serializedTypeGenericSymbol is null || serializedTypeIdAttributeSymbol is null || serializedTypeOptionsAttributeSymbol is null || objectTypeSymbol is null)
-                return;
-
             var allTypes = EnumerateNamedTypes(startContext.Compilation.Assembly.GlobalNamespace)
                 .ToImmutableArray();
 
-            var constraints = CollectFieldConstraints(
-                allTypes,
-                objectTypeSymbol,
-                serializedTypeNonGenericSymbol,
-                serializedTypeGenericSymbol,
-                serializedTypeOptionsAttributeSymbol);
+            var constraintsBuilder = ImmutableArray.CreateBuilder<FieldConstraint>();
 
-            var propagatedConstraintTypes = CollectPropagatedGenericParameterConstraints(allTypes, constraints);
+            var canCollectLocalFieldConstraints = serializedTypeGenericSymbol is not null
+                && serializedTypeOptionsAttributeSymbol is not null
+                && objectTypeSymbol is not null;
+            if (canCollectLocalFieldConstraints) {
+                constraintsBuilder.AddRange(CollectFieldConstraints(
+                    allTypes,
+                    objectTypeSymbol!,
+                    serializedTypeNonGenericSymbol,
+                    serializedTypeGenericSymbol!,
+                    serializedTypeOptionsAttributeSymbol!));
+            }
 
             var externalConstraints = CollectExternalFieldConstraints(startContext.Compilation, startContext.Options);
             if (!externalConstraints.IsDefaultOrEmpty) {
-                var mergedBuilder = ImmutableArray.CreateBuilder<FieldConstraint>();
-                mergedBuilder.AddRange(constraints);
-                mergedBuilder.AddRange(externalConstraints);
-                constraints = mergedBuilder.ToImmutable();
+                constraintsBuilder.AddRange(externalConstraints);
             }
 
-            if (!externalConstraints.IsDefaultOrEmpty) {
-                var mergedPropagated = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
-                mergedPropagated.AddRange(propagatedConstraintTypes);
-                mergedPropagated.AddRange(CollectPropagatedGenericParameterConstraints(allTypes, externalConstraints));
-                propagatedConstraintTypes = mergedPropagated
-                    .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
-                    .ToImmutableArray();
-            }
+            var constraints = constraintsBuilder.ToImmutable();
+            if (constraints.IsDefaultOrEmpty)
+                return;
+
+            var propagatedConstraintTypes = CollectPropagatedGenericParameterConstraints(allTypes, constraints);
 
             startContext.RegisterSymbolAction(symbolContext => AnalyzeNamedType(
                 (INamedTypeSymbol)symbolContext.Symbol,
@@ -94,7 +92,7 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
 
     static void AnalyzeNamedType(
         INamedTypeSymbol namedType,
-        INamedTypeSymbol serializedTypeIdAttributeSymbol,
+        INamedTypeSymbol? serializedTypeIdAttributeSymbol,
         ImmutableArray<FieldConstraint> constraints,
         ImmutableArray<INamedTypeSymbol> propagatedConstraintTypes,
         SymbolAnalysisContext context) {
@@ -679,8 +677,35 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         }
     }
 
-    static bool HasSerializedTypeIdAttribute(INamedTypeSymbol typeSymbol, INamedTypeSymbol serializedTypeIdAttributeSymbol) {
-        return TryGetSerializedTypeIdAttributeData(typeSymbol, serializedTypeIdAttributeSymbol) is not null;
+    static bool HasSerializedTypeIdAttribute(INamedTypeSymbol typeSymbol, INamedTypeSymbol? serializedTypeIdAttributeSymbol) {
+        if (serializedTypeIdAttributeSymbol is not null)
+            return TryGetSerializedTypeIdAttributeData(typeSymbol, serializedTypeIdAttributeSymbol) is not null;
+
+        foreach (var attribute in typeSymbol.GetAttributes()) {
+            var attributeClass = attribute.AttributeClass;
+            if (attributeClass is null)
+                continue;
+
+            if (IsSerializedTypeIdAttributeName(attributeClass))
+                return true;
+        }
+
+        return false;
+    }
+
+    static bool IsSerializedTypeIdAttributeName(INamedTypeSymbol attributeClass) {
+        var displayName = attributeClass.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat);
+        if (string.Equals(displayName, SERIALIZED_TYPE_ID_ATTRIBUTE_METADATA_NAME, StringComparison.Ordinal))
+            return true;
+
+        var containingNamespace = attributeClass.ContainingNamespace?.ToDisplayString();
+        if (!string.Equals(containingNamespace, "Hissal.UnityTypeSerializer", StringComparison.Ordinal))
+            return false;
+
+        return string.Equals(attributeClass.Name, SERIALIZED_TYPE_ID_ATTRIBUTE_NAME, StringComparison.Ordinal) ||
+               string.Equals(attributeClass.Name, SERIALIZED_TYPE_ID_SHORT_ATTRIBUTE_NAME, StringComparison.Ordinal) ||
+               string.Equals(attributeClass.MetadataName, SERIALIZED_TYPE_ID_ATTRIBUTE_NAME, StringComparison.Ordinal) ||
+               string.Equals(attributeClass.MetadataName, SERIALIZED_TYPE_ID_SHORT_ATTRIBUTE_NAME, StringComparison.Ordinal);
     }
 
     static AttributeData? TryGetSerializedTypeIdAttributeData(INamedTypeSymbol typeSymbol, INamedTypeSymbol serializedTypeIdAttributeSymbol) {
