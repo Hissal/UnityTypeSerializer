@@ -1,0 +1,17 @@
+{
+    "name": "Hissal.UnityTypeSerializer.Examples",
+    "rootNamespace": "Hissal.UnityTypeSerializer",
+    "references": [
+        "GUID:f9785da0d0caa3949acdb2a713fcf8a7",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SerializedTypeUsageManifest generatedAtUtc="2026-04-11T10:37:07.3453291Z">
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="255" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="7" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IConstraintExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IConstraintExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IConstraintExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IConstraintExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IConstraintExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="GetCustomIncludeTypes" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IDamageEffect" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="8" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="true" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="true" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IRepository" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.ISerializedTypeExample" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IStrategy" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+  <Entry baseConstraint="Hissal.UnityTypeSerializer.Examples.IStrategy" allowOpenGenerics="false" allowedTypeKinds="3" inheritsAll="" inheritsAny="" customTypeFilter="" />
+</SerializedTypeUsageManifest>
