@@ -32,20 +32,17 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
         static List<SerializedTypeUsageEntry> CollectUsageEntries() {
             var entries = new List<SerializedTypeUsageEntry>();
-            var allTypes = AppDomain.CurrentDomain.GetAssemblies()
-                .OrderBy(a => a.FullName, StringComparer.Ordinal)
-                .SelectMany(GetLoadableTypes)
-                .Where(t => t != null)
-                .Cast<Type>()
-                .ToArray();
+            var allTypes = SerializedTypeEditorTypeCache.GetRuntimeDependentTypes();
+            var genericConstraintIndex = new GenericConstraintIndex(allTypes);
 
             foreach (var type in allTypes) {
                 const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
                 foreach (var field in type.GetFields(flags)) {
-                    AddUsageEntriesForField(allTypes, type, field, entries);
+                    AddUsageEntriesForField(genericConstraintIndex, type, field, entries);
                 }
             }
 
+            DeduplicateAnalyzerEquivalentEntries(entries);
             return entries;
         }
 
@@ -86,7 +83,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (compare != 0)
                 return compare;
 
-            return CompareSequence(a.InheritsOrImplementsAllMetadataNames, b.InheritsOrImplementsAllMetadataNames);
+            compare = CompareSequence(a.InheritsOrImplementsAllMetadataNames, b.InheritsOrImplementsAllMetadataNames);
+            if (compare != 0)
+                return compare;
+
+            return CompareSequence(a.InheritsOrImplementsAnyMetadataNames, b.InheritsOrImplementsAnyMetadataNames);
         }
 
         static int CompareSequence(IReadOnlyList<string> left, IReadOnlyList<string> right) {
@@ -101,14 +102,14 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
 
         static void AddUsageEntriesForField(
-            IReadOnlyList<Type> allTypes,
+            GenericConstraintIndex genericConstraintIndex,
             Type declaringType,
             FieldInfo field,
             List<SerializedTypeUsageEntry> entries) {
             var fieldType = field.FieldType;
-            var options = field.GetCustomAttribute<SerializedTypeOptionsAttribute>(true);
 
             if (fieldType == typeof(SerializedType)) {
+                var options = field.GetCustomAttribute<SerializedTypeOptionsAttribute>(true);
                 if (!HasMeaningfulNonGenericOptions(options))
                     return;
 
@@ -120,15 +121,16 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (!fieldType.IsGenericType || fieldType.GetGenericTypeDefinition() != typeof(SerializedType<>))
                 return;
 
+            var options2 = field.GetCustomAttribute<SerializedTypeOptionsAttribute>(true);
             var baseConstraint = fieldType.GetGenericArguments()[0];
             if (!baseConstraint.ContainsGenericParameters) {
-                if (TryCreateUsageEntry(declaringType, field, baseConstraint, options, out var directEntry))
+                if (TryCreateUsageEntry(declaringType, field, baseConstraint, options2, out var directEntry))
                     entries.Add(directEntry);
                 return;
             }
 
-            foreach (var (resolvedDeclaringType, resolvedConstraint) in ResolveConcreteGenericConstraints(allTypes, declaringType, baseConstraint)) {
-                if (TryCreateUsageEntry(resolvedDeclaringType, field, resolvedConstraint, options, out var resolvedEntry))
+            foreach (var (resolvedDeclaringType, resolvedConstraint) in genericConstraintIndex.Resolve(declaringType, baseConstraint)) {
+                if (TryCreateUsageEntry(resolvedDeclaringType, field, resolvedConstraint, options2, out var resolvedEntry))
                     entries.Add(resolvedEntry);
             }
         }
@@ -180,58 +182,6 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return false;
         }
 
-        static IEnumerable<(Type DeclaringType, Type BaseConstraint)> ResolveConcreteGenericConstraints(
-            IReadOnlyList<Type> allTypes,
-            Type genericDeclaringType,
-            Type baseConstraint) {
-            if (!genericDeclaringType.ContainsGenericParameters)
-                yield break;
-
-            foreach (var candidate in allTypes) {
-                if (candidate.ContainsGenericParameters)
-                    continue;
-
-                if (!TryCreateGenericParameterMap(candidate, genericDeclaringType, out var map))
-                    continue;
-
-                var resolvedConstraint = ResolveGenericType(baseConstraint, map);
-                if (resolvedConstraint == null || resolvedConstraint.ContainsGenericParameters)
-                    continue;
-
-                yield return (candidate, resolvedConstraint);
-            }
-        }
-
-        static bool TryCreateGenericParameterMap(
-            Type candidateType,
-            Type genericDeclaringType,
-            out Dictionary<Type, Type> map) {
-            map = new Dictionary<Type, Type>();
-
-            var declaringGenericDefinition = genericDeclaringType.IsGenericType
-                ? genericDeclaringType.GetGenericTypeDefinition()
-                : genericDeclaringType;
-
-            for (var current = candidateType; current != null; current = current.BaseType) {
-                if (!current.IsGenericType)
-                    continue;
-
-                var currentDefinition = current.GetGenericTypeDefinition();
-                if (currentDefinition != declaringGenericDefinition)
-                    continue;
-
-                var definitionArguments = currentDefinition.GetGenericArguments();
-                var actualArguments = current.GetGenericArguments();
-                for (var i = 0; i < Math.Min(definitionArguments.Length, actualArguments.Length); i++) {
-                    map[definitionArguments[i]] = actualArguments[i];
-                }
-
-                return true;
-            }
-
-            return false;
-        }
-
         static Type? ResolveGenericType(Type type, IReadOnlyDictionary<Type, Type> map) {
             if (type.IsGenericParameter) {
                 return map.TryGetValue(type, out var resolvedParameter)
@@ -260,18 +210,6 @@ namespace Hissal.UnityTypeSerializer.Editor {
             }
             catch {
                 return null;
-            }
-        }
-
-        static IEnumerable<Type?> GetLoadableTypes(Assembly assembly) {
-            try {
-                return assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException e) {
-                return e.Types;
-            }
-            catch {
-                return Array.Empty<Type>();
             }
         }
 
@@ -326,6 +264,136 @@ namespace Hissal.UnityTypeSerializer.Editor {
                         new XAttribute("inheritsAll", string.Join(";", entry.InheritsOrImplementsAllMetadataNames)),
                         new XAttribute("inheritsAny", string.Join(";", entry.InheritsOrImplementsAnyMetadataNames)),
                         new XAttribute("customTypeFilter", entry.CustomTypeFilter)))));
+        }
+
+        static void DeduplicateAnalyzerEquivalentEntries(List<SerializedTypeUsageEntry> entries) {
+            var seenEntries = new HashSet<SerializedTypeUsageEntry>(AnalyzerEquivalentEntryComparer.Instance);
+            var deduplicatedEntries = new List<SerializedTypeUsageEntry>(entries.Count);
+
+            foreach (var entry in entries) {
+                if (seenEntries.Add(entry))
+                    deduplicatedEntries.Add(entry);
+            }
+
+            entries.Clear();
+            entries.AddRange(deduplicatedEntries);
+        }
+
+        sealed class GenericConstraintIndex {
+            readonly Dictionary<Type, List<GenericConstraintCandidate>> candidatesByGenericDefinition = new();
+
+            public GenericConstraintIndex(IReadOnlyList<Type> allTypes) {
+                foreach (var candidateType in allTypes) {
+                    if (candidateType.ContainsGenericParameters)
+                        continue;
+
+                    AddCandidateType(candidateType);
+                }
+            }
+
+            public IEnumerable<(Type DeclaringType, Type BaseConstraint)> Resolve(Type genericDeclaringType, Type baseConstraint) {
+                if (!genericDeclaringType.ContainsGenericParameters)
+                    yield break;
+
+                var genericDefinition = genericDeclaringType.IsGenericType
+                    ? genericDeclaringType.GetGenericTypeDefinition()
+                    : genericDeclaringType;
+
+                if (!candidatesByGenericDefinition.TryGetValue(genericDefinition, out var candidates))
+                    yield break;
+
+                foreach (var candidate in candidates) {
+                    var resolvedConstraint = ResolveGenericType(baseConstraint, candidate.GenericParameterMap);
+                    if (resolvedConstraint == null || resolvedConstraint.ContainsGenericParameters)
+                        continue;
+
+                    yield return (candidate.CandidateType, resolvedConstraint);
+                }
+            }
+
+            void AddCandidateType(Type candidateType) {
+                for (var current = candidateType; current != null; current = current.BaseType) {
+                    if (!current.IsGenericType)
+                        continue;
+
+                    var genericDefinition = current.GetGenericTypeDefinition();
+                    var genericParameterMap = CreateGenericParameterMap(genericDefinition, current);
+                    if (genericParameterMap.Count == 0)
+                        continue;
+
+                    if (!candidatesByGenericDefinition.TryGetValue(genericDefinition, out var candidates)) {
+                        candidates = new List<GenericConstraintCandidate>();
+                        candidatesByGenericDefinition[genericDefinition] = candidates;
+                    }
+
+                    candidates.Add(new GenericConstraintCandidate(candidateType, genericParameterMap));
+                }
+            }
+
+            static Dictionary<Type, Type> CreateGenericParameterMap(Type genericDefinition, Type constructedType) {
+                var map = new Dictionary<Type, Type>();
+                var definitionArguments = genericDefinition.GetGenericArguments();
+                var actualArguments = constructedType.GetGenericArguments();
+
+                for (var i = 0; i < Math.Min(definitionArguments.Length, actualArguments.Length); i++) {
+                    map[definitionArguments[i]] = actualArguments[i];
+                }
+
+                return map;
+            }
+        }
+
+        readonly struct GenericConstraintCandidate {
+            public GenericConstraintCandidate(Type candidateType, IReadOnlyDictionary<Type, Type> genericParameterMap) {
+                CandidateType = candidateType;
+                GenericParameterMap = genericParameterMap;
+            }
+
+            public Type CandidateType { get; }
+            public IReadOnlyDictionary<Type, Type> GenericParameterMap { get; }
+        }
+
+        sealed class AnalyzerEquivalentEntryComparer : IEqualityComparer<SerializedTypeUsageEntry> {
+            public static readonly AnalyzerEquivalentEntryComparer Instance = new();
+
+            public bool Equals(SerializedTypeUsageEntry? x, SerializedTypeUsageEntry? y) {
+                if (ReferenceEquals(x, y))
+                    return true;
+
+                if (x == null || y == null)
+                    return false;
+
+                return string.Equals(x.BaseConstraintMetadataName, y.BaseConstraintMetadataName, StringComparison.Ordinal)
+                       && x.AllowGenericTypeConstruction == y.AllowGenericTypeConstruction
+                       && x.AllowOpenGenerics == y.AllowOpenGenerics
+                       && x.AllowedTypeKinds == y.AllowedTypeKinds
+                       && string.Equals(x.CustomTypeFilter, y.CustomTypeFilter, StringComparison.Ordinal)
+                       && x.InheritsOrImplementsAllMetadataNames.SequenceEqual(y.InheritsOrImplementsAllMetadataNames)
+                       && x.InheritsOrImplementsAnyMetadataNames.SequenceEqual(y.InheritsOrImplementsAnyMetadataNames);
+            }
+
+            public int GetHashCode(SerializedTypeUsageEntry obj) {
+                unchecked {
+                    var hash = StringComparer.Ordinal.GetHashCode(obj.BaseConstraintMetadataName);
+                    hash = (hash * 397) ^ obj.AllowGenericTypeConstruction.GetHashCode();
+                    hash = (hash * 397) ^ obj.AllowOpenGenerics.GetHashCode();
+                    hash = (hash * 397) ^ obj.AllowedTypeKinds;
+                    hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(obj.CustomTypeFilter);
+                    hash = AddSequenceHash(hash, obj.InheritsOrImplementsAllMetadataNames);
+                    hash = AddSequenceHash(hash, obj.InheritsOrImplementsAnyMetadataNames);
+                    return hash;
+                }
+            }
+
+            static int AddSequenceHash(int hash, IReadOnlyList<string> values) {
+                unchecked {
+                    foreach (var value in values) {
+                        hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(value);
+                    }
+
+                    return hash;
+                }
+            }
         }
     }
 }

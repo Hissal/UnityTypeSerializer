@@ -539,14 +539,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // Generic argument candidates are filtered only by generic parameter constraints
             // and generic construction rules (self-nesting prevention, etc.).
             // CustomTypeFilter is NOT applied here — it only applies to the final assignable type list.
-            IEnumerable<Type> candidateTypes = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => {
-                    try {
-                        return a.GetTypes();
-                    } catch {
-                        return Enumerable.Empty<Type>();
-                    }
-                });
+            IEnumerable<Type> candidateTypes = SerializedTypeEditorTypeCache.GetLoadableDomainTypes();
             
             return candidateTypes
                 .Where(t => !t.IsAbstract && !t.IsInterface)

@@ -20,13 +20,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
         static Dictionary<string, List<Type>> CollectTypeIds() {
             var typeIdToTypes = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
 
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
-                if (assembly.IsDynamic)
-                    continue;
-
-                foreach (var type in GetLoadableTypes(assembly)) {
-                    TryAddTypeId(typeIdToTypes, type);
-                }
+            foreach (var type in SerializedTypeEditorTypeCache.GetTypesWithAttribute<SerializedTypeIdAttribute>()) {
+                TryAddTypeId(typeIdToTypes, type);
             }
 
             return typeIdToTypes;
@@ -65,18 +60,6 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
                 result.AddError(
                     $"Duplicate SerializedTypeId '{entry.Key}' found on multiple types: {string.Join(", ", conflictingTypes)}");
-            }
-        }
-
-        static IEnumerable<Type?> GetLoadableTypes(Assembly assembly) {
-            try {
-                return assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException reflectionTypeLoadException) {
-                return reflectionTypeLoadException.Types;
-            }
-            catch {
-                return Array.Empty<Type>();
             }
         }
     }

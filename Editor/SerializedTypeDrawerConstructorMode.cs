@@ -740,16 +740,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 }
             }
             
-            // Get all types from all assemblies
-            var allTypes = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => {
-                    try {
-                        return a.GetTypes();
-                    }
-                    catch {
-                        return Enumerable.Empty<Type>();
-                    }
-                });
+            // Get all cached domain types for generic argument candidates.
+            var allTypes = SerializedTypeEditorTypeCache.GetLoadableDomainTypes();
             
             // Filter types that satisfy the constraints
             var validTypes = allTypes

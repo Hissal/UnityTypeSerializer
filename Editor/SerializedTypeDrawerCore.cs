@@ -224,7 +224,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             
             IEnumerable<Type> typesToFilter = (includedTypes != null && includedTypes.Count > 0)
                 ? includedTypes.Where(t => baseConstraint.IsAssignableFrom(t))
-                : TypeCache.GetTypesDerivedFrom(baseConstraint);
+                : SerializedTypeEditorTypeCache.GetTypesDerivedFrom(baseConstraint);
             typesToFilter = typesToFilter.Where(t => PassesInheritanceConstraints(t, options));
             
             if (excludedTypes != null && excludedTypes.Count > 0) {
@@ -551,12 +551,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     var typeName = parts[0];
                     targetMemberName = parts[1];
                     
-                    targetType = AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(a => {
-                            try { return a.GetTypes(); }
-                            catch { return Array.Empty<Type>(); }
-                        })
-                        .FirstOrDefault(t => t.Name == typeName || t.FullName == typeName);
+                    targetType = SerializedTypeEditorTypeCache.FindTypeByName(typeName);
                     
                     instance = null;
                 }
@@ -648,12 +643,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     targetMemberName = parts[1];
                     
                     // Try to find the type
-                    targetType = AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(a => {
-                            try { return a.GetTypes(); }
-                            catch { return Array.Empty<Type>(); }
-                        })
-                        .FirstOrDefault(t => t.Name == typeName || t.FullName == typeName);
+                    targetType = SerializedTypeEditorTypeCache.FindTypeByName(typeName);
                     
                     // No instance for static members
                     instance = null;
