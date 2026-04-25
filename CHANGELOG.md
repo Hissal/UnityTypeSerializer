@@ -1,6 +1,6 @@
 # Changelog
 
-## ...
+## v ...
 - Optimized `SerializedType` type resolution performance by caching resolved `System.Type` instances and invalidating the cache when the serialized type changes.
 - Added Odin Validator for Type serialization eligibility, with support for all `SerializedTypeOptions` constraints and detailed error messages, fully guarded with `#if ODIN_VALIDATOR`.
 
