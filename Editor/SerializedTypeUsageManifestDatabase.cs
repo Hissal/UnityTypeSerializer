@@ -17,6 +17,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
             var entries = new List<SerializedTypeUsageEntry>();
             foreach (var element in root.Elements("Entry")) {
                 var entry = new SerializedTypeUsageEntry {
+                    DeclaringType = (string?)element.Attribute("declaringType") ?? string.Empty,
+                    FieldName = (string?)element.Attribute("fieldName") ?? string.Empty,
                     BaseConstraintMetadataName = (string?)element.Attribute("baseConstraint") ?? string.Empty,
                     AllowGenericTypeConstruction = bool.TryParse((string?)element.Attribute("allowGenericTypeConstruction"), out var allowGenericTypeConstruction) && allowGenericTypeConstruction,
                     AllowOpenGenerics = bool.TryParse((string?)element.Attribute("allowOpenGenerics"), out var allowOpenGenerics) && allowOpenGenerics,

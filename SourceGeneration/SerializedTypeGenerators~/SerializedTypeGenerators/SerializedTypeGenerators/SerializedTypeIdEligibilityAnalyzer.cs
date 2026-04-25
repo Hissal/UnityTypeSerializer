@@ -162,23 +162,29 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
 
     static ImmutableArray<FieldConstraint> CollectExternalFieldConstraints(Compilation compilation, AnalyzerOptions options) {
         var builder = ImmutableArray.CreateBuilder<FieldConstraint>();
+        var sawManifestAdditionalFile = false;
 
         foreach (var additionalFile in options.AdditionalFiles) {
             var fileName = System.IO.Path.GetFileName(additionalFile.Path);
             if (!string.Equals(fileName, SERIALIZED_TYPE_USAGE_MANIFEST_FILE_NAME, StringComparison.OrdinalIgnoreCase))
                 continue;
 
+            sawManifestAdditionalFile = true;
             var text = additionalFile.GetText();
             if (text is null)
                 continue;
 
-            AddExternalConstraintsFromXml(compilation, text.ToString(), builder);
+            var xmlContent = text.ToString();
+            if (string.IsNullOrWhiteSpace(xmlContent))
+                continue;
+
+            AddExternalConstraintsFromXml(compilation, xmlContent, builder);
         }
 
-        if (builder.Count == 0) {
+        if (builder.Count == 0 && !sawManifestAdditionalFile) {
             var fallbackManifestXml = TryReadFallbackManifestXml();
             if (!string.IsNullOrWhiteSpace(fallbackManifestXml)) {
-                AddExternalConstraintsFromXml(compilation, fallbackManifestXml, builder);
+                AddExternalConstraintsFromXml(compilation, fallbackManifestXml!, builder);
             }
         }
 
@@ -259,36 +265,63 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
                 : TYPE_KIND_OBJECT;
 
             var inheritsAllSymbols = ResolveConstraintTypeList(compilation, (string?)entryElement.Attribute("inheritsAll"));
+            if (inheritsAllSymbols.HasUnresolvedTypes)
+                continue;
+
             var inheritsAnySymbols = ResolveConstraintTypeList(compilation, (string?)entryElement.Attribute("inheritsAny"));
+            if (inheritsAnySymbols.HasRequestedTypes && inheritsAnySymbols.ResolvedTypes.IsDefaultOrEmpty)
+                continue;
+
+            if (IsSystemObject(baseConstraintSymbol) &&
+                inheritsAllSymbols.ResolvedTypes.IsDefaultOrEmpty &&
+                inheritsAnySymbols.ResolvedTypes.IsDefaultOrEmpty) {
+                continue;
+            }
+
+            var declaringType = (string?)entryElement.Attribute("declaringType") ?? string.Empty;
+            var fieldName = (string?)entryElement.Attribute("fieldName") ?? string.Empty;
 
             builder.Add(new FieldConstraint(
                 baseConstraintSymbol,
                 allowedTypeKinds,
                 allowGenericTypeConstruction,
                 allowOpenGenerics,
-                inheritsAllSymbols,
-                inheritsAnySymbols,
-                $"manifest base '{baseConstraintSymbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}'"));
+                inheritsAllSymbols.ResolvedTypes,
+                inheritsAnySymbols.ResolvedTypes,
+                BuildManifestConstraintReason(
+                    baseConstraintSymbol,
+                    allowedTypeKinds,
+                    allowGenericTypeConstruction,
+                    allowOpenGenerics,
+                    inheritsAllSymbols.ResolvedTypes,
+                    inheritsAnySymbols.ResolvedTypes,
+                    declaringType,
+                    fieldName)));
         }
     }
 
-    static ImmutableArray<INamedTypeSymbol> ResolveConstraintTypeList(Compilation compilation, string? rawValue) {
+    static ResolvedConstraintTypeList ResolveConstraintTypeList(Compilation compilation, string? rawValue) {
         if (string.IsNullOrWhiteSpace(rawValue))
-            return ImmutableArray<INamedTypeSymbol>.Empty;
+            return new ResolvedConstraintTypeList(ImmutableArray<INamedTypeSymbol>.Empty, false, false);
 
         var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
         var entries = rawValue!.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+        var hasRequestedTypes = false;
+        var hasUnresolvedTypes = false;
         foreach (var entry in entries) {
             var metadataName = entry.Trim();
             if (string.IsNullOrEmpty(metadataName))
                 continue;
 
+            hasRequestedTypes = true;
             var symbol = compilation.GetTypeByMetadataName(metadataName);
             if (symbol is not null)
                 builder.Add(symbol);
+            else
+                hasUnresolvedTypes = true;
         }
 
-        return builder.ToImmutable();
+        return new ResolvedConstraintTypeList(builder.ToImmutable(), hasRequestedTypes, hasUnresolvedTypes);
     }
 
     static IEnumerable<INamedTypeSymbol> EnumerateNamedTypes(INamespaceSymbol namespaceSymbol) {
@@ -356,7 +389,7 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
                     options.AllowOpenGenerics,
                     options.InheritsOrImplementsAll,
                     options.InheritsOrImplementsAny,
-                    BuildSourceConstraintReason(baseConstraint, fieldSymbol)));
+                    BuildSourceConstraintReason(baseConstraint, options, fieldSymbol)));
             }
 
             return;
@@ -377,7 +410,7 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             options.AllowOpenGenerics,
             options.InheritsOrImplementsAll,
             options.InheritsOrImplementsAny,
-            BuildSourceConstraintReason(objectTypeSymbol, fieldSymbol)));
+            BuildSourceConstraintReason(objectTypeSymbol, options, fieldSymbol)));
     }
 
     static OptionsData ParseOptions(IFieldSymbol fieldSymbol, INamedTypeSymbol serializedTypeOptionsAttributeSymbol) {
@@ -546,8 +579,70 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         return !options.InheritsOrImplementsAll.IsDefaultOrEmpty || !options.InheritsOrImplementsAny.IsDefaultOrEmpty;
     }
 
-    static string BuildSourceConstraintReason(INamedTypeSymbol baseConstraint, IFieldSymbol fieldSymbol) {
-        return $"field '{fieldSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}.{fieldSymbol.Name}' base '{baseConstraint.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}'";
+    static string BuildSourceConstraintReason(INamedTypeSymbol baseConstraint, OptionsData options, IFieldSymbol fieldSymbol) {
+        return BuildConstraintReason(
+            $"field '{fieldSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}.{fieldSymbol.Name}'",
+            baseConstraint,
+            options.AllowedTypeKinds,
+            options.AllowGenericTypeConstruction,
+            options.AllowOpenGenerics,
+            options.InheritsOrImplementsAll,
+            options.InheritsOrImplementsAny);
+    }
+
+    static string BuildManifestConstraintReason(
+        INamedTypeSymbol baseConstraint,
+        int allowedTypeKinds,
+        bool allowGenericTypeConstruction,
+        bool allowOpenGenerics,
+        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAll,
+        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAny,
+        string declaringType,
+        string fieldName) {
+
+        var sourceDescription = !string.IsNullOrWhiteSpace(declaringType) && !string.IsNullOrWhiteSpace(fieldName)
+            ? $"manifest field '{declaringType}.{fieldName}'"
+            : "manifest entry";
+
+        return BuildConstraintReason(
+            sourceDescription,
+            baseConstraint,
+            allowedTypeKinds,
+            allowGenericTypeConstruction,
+            allowOpenGenerics,
+            inheritsOrImplementsAll,
+            inheritsOrImplementsAny);
+    }
+
+    static string BuildConstraintReason(
+        string sourceDescription,
+        INamedTypeSymbol baseConstraint,
+        int allowedTypeKinds,
+        bool allowGenericTypeConstruction,
+        bool allowOpenGenerics,
+        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAll,
+        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAny) {
+
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(sourceDescription))
+            parts.Add(sourceDescription);
+
+        parts.Add($"base '{baseConstraint.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}'");
+        parts.Add($"AllowedTypeKinds={FormatAllowedTypeKinds(allowedTypeKinds)}");
+
+        if (!inheritsOrImplementsAll.IsDefaultOrEmpty)
+            parts.Add($"InheritsOrImplementsAll=[{FormatSymbolList(inheritsOrImplementsAll)}]");
+
+        if (!inheritsOrImplementsAny.IsDefaultOrEmpty)
+            parts.Add($"InheritsOrImplementsAny=[{FormatSymbolList(inheritsOrImplementsAny)}]");
+
+        if (allowGenericTypeConstruction)
+            parts.Add("AllowGenericTypeConstruction=true");
+
+        if (allowOpenGenerics)
+            parts.Add("AllowOpenGenerics=true");
+
+        return string.Join(", ", parts);
     }
 
     static string BuildReasonText(ImmutableArray<string>.Builder reasons) {
@@ -560,6 +655,45 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             .ToArray();
 
         return string.Join("; ", uniqueReasons);
+    }
+
+    static string FormatSymbolList(ImmutableArray<INamedTypeSymbol> typeSymbols) {
+        return string.Join(", ", typeSymbols.Select(typeSymbol =>
+            typeSymbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)));
+    }
+
+    static string FormatAllowedTypeKinds(int allowedTypeKinds) {
+        if (allowedTypeKinds == 0)
+            return "None";
+
+        if ((allowedTypeKinds & TYPE_KIND_ALL) == TYPE_KIND_ALL && (allowedTypeKinds & ~TYPE_KIND_ALL) == 0)
+            return "All";
+
+        if (allowedTypeKinds == TYPE_KIND_OBJECT)
+            return "Object";
+
+        var names = new List<string>();
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_CLASS, "Class");
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_STRUCT, "Struct");
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_ABSTRACT, "Abstract");
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_INTERFACE, "Interface");
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_STATIC, "Static");
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_ENUM, "Enum");
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_DELEGATE, "Delegate");
+        AddKindName(names, allowedTypeKinds, TYPE_KIND_PRIMITIVE, "Primitive");
+
+        var unknownFlags = allowedTypeKinds & ~TYPE_KIND_ALL;
+        if (unknownFlags != 0)
+            names.Add(unknownFlags.ToString());
+
+        return names.Count == 0
+            ? allowedTypeKinds.ToString()
+            : string.Join("|", names);
+    }
+
+    static void AddKindName(List<string> names, int allowedTypeKinds, int flag, string name) {
+        if ((allowedTypeKinds & flag) != 0)
+            names.Add(name);
     }
 
     static ImmutableArray<INamedTypeSymbol> CollectPropagatedGenericParameterConstraints(
@@ -677,6 +811,10 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         }
     }
 
+    static bool IsSystemObject(ITypeSymbol typeSymbol) {
+        return typeSymbol.SpecialType == SpecialType.System_Object;
+    }
+
     static bool HasSerializedTypeIdAttribute(INamedTypeSymbol typeSymbol, INamedTypeSymbol? serializedTypeIdAttributeSymbol) {
         if (serializedTypeIdAttributeSymbol is not null)
             return TryGetSerializedTypeIdAttributeData(typeSymbol, serializedTypeIdAttributeSymbol) is not null;
@@ -759,6 +897,22 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsAll { get; }
         public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsAny { get; }
         public bool HasDynamicCustomFilter { get; }
+    }
+
+    readonly struct ResolvedConstraintTypeList {
+        public ResolvedConstraintTypeList(
+            ImmutableArray<INamedTypeSymbol> resolvedTypes,
+            bool hasRequestedTypes,
+            bool hasUnresolvedTypes) {
+
+            ResolvedTypes = resolvedTypes;
+            HasRequestedTypes = hasRequestedTypes;
+            HasUnresolvedTypes = hasUnresolvedTypes;
+        }
+
+        public ImmutableArray<INamedTypeSymbol> ResolvedTypes { get; }
+        public bool HasRequestedTypes { get; }
+        public bool HasUnresolvedTypes { get; }
     }
 
     readonly struct FieldConstraint {

@@ -257,6 +257,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     new XAttribute("generatedAtUtc", generatedAtUtc),
                     entries.Select(entry => new XElement(
                         "Entry",
+                        new XAttribute("declaringType", entry.DeclaringType),
+                        new XAttribute("fieldName", entry.FieldName),
                         new XAttribute("baseConstraint", entry.BaseConstraintMetadataName),
                         new XAttribute("allowGenericTypeConstruction", entry.AllowGenericTypeConstruction),
                         new XAttribute("allowOpenGenerics", entry.AllowOpenGenerics),

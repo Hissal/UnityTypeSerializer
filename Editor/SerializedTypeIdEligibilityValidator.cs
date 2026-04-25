@@ -69,15 +69,27 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     continue;
 
                 var inheritsAll = ResolveConstraintTypes(typeByMetadataName, entry.InheritsOrImplementsAllMetadataNames);
+                if (inheritsAll.HasUnresolvedTypes)
+                    continue;
+
                 var inheritsAny = ResolveConstraintTypes(typeByMetadataName, entry.InheritsOrImplementsAnyMetadataNames);
+                if (inheritsAny.HasRequestedTypes && inheritsAny.ResolvedTypes.Length == 0)
+                    continue;
+
+                if (baseConstraint == typeof(object) &&
+                    inheritsAll.ResolvedTypes.Length == 0 &&
+                    inheritsAny.ResolvedTypes.Length == 0) {
+                    continue;
+                }
+
                 constraints.Add(new ManifestConstraint(
                     baseConstraint,
                     entry.AllowedTypeKinds,
                     entry.AllowGenericTypeConstruction,
                     entry.AllowOpenGenerics,
-                    inheritsAll,
-                    inheritsAny,
-                    $"manifest base '{GetTypeDisplayName(baseConstraint)}'"));
+                    inheritsAll.ResolvedTypes,
+                    inheritsAny.ResolvedTypes,
+                    BuildManifestConstraintReason(entry, baseConstraint, inheritsAll.ResolvedTypes, inheritsAny.ResolvedTypes)));
             }
 
             return constraints;
@@ -97,18 +109,27 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return dictionary;
         }
 
-        static Type[] ResolveConstraintTypes(IReadOnlyDictionary<string, Type> typeByMetadataName, IReadOnlyList<string> metadataNames) {
+        static ResolvedConstraintTypeList ResolveConstraintTypes(IReadOnlyDictionary<string, Type> typeByMetadataName, IReadOnlyList<string> metadataNames) {
             if (metadataNames == null || metadataNames.Count == 0)
-                return Array.Empty<Type>();
+                return new ResolvedConstraintTypeList(Array.Empty<Type>(), false, false);
 
             var resolvedTypes = new List<Type>(metadataNames.Count);
+            var hasRequestedTypes = false;
+            var hasUnresolvedTypes = false;
             for (var i = 0; i < metadataNames.Count; i++) {
+                if (string.IsNullOrWhiteSpace(metadataNames[i]))
+                    continue;
+
+                hasRequestedTypes = true;
                 if (TryResolveMetadataType(typeByMetadataName, metadataNames[i], out var resolvedType)) {
                     resolvedTypes.Add(resolvedType);
                 }
+                else {
+                    hasUnresolvedTypes = true;
+                }
             }
 
-            return resolvedTypes.ToArray();
+            return new ResolvedConstraintTypeList(resolvedTypes.ToArray(), hasRequestedTypes, hasUnresolvedTypes);
         }
 
         static bool TryResolveMetadataType(IReadOnlyDictionary<string, Type> typeByMetadataName, string metadataName, out Type resolvedType) {
@@ -210,8 +231,89 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return (isClass || isStruct) && (allowedTypeKinds & TYPE_KIND_OBJECT) == TYPE_KIND_OBJECT;
         }
 
+        static string BuildManifestConstraintReason(
+            SerializedTypeUsageEntry entry,
+            Type baseConstraint,
+            Type[] inheritsOrImplementsAll,
+            Type[] inheritsOrImplementsAny) {
+
+            var sourceDescription = !string.IsNullOrWhiteSpace(entry.DeclaringType) && !string.IsNullOrWhiteSpace(entry.FieldName)
+                ? $"manifest field '{entry.DeclaringType}.{entry.FieldName}'"
+                : "manifest entry";
+
+            var parts = new List<string> {
+                sourceDescription,
+                $"base '{GetTypeDisplayName(baseConstraint)}'",
+                $"AllowedTypeKinds={FormatAllowedTypeKinds(entry.AllowedTypeKinds)}",
+            };
+
+            if (inheritsOrImplementsAll.Length > 0)
+                parts.Add($"InheritsOrImplementsAll=[{FormatTypeList(inheritsOrImplementsAll)}]");
+
+            if (inheritsOrImplementsAny.Length > 0)
+                parts.Add($"InheritsOrImplementsAny=[{FormatTypeList(inheritsOrImplementsAny)}]");
+
+            if (entry.AllowGenericTypeConstruction)
+                parts.Add("AllowGenericTypeConstruction=true");
+
+            if (entry.AllowOpenGenerics)
+                parts.Add("AllowOpenGenerics=true");
+
+            return string.Join(", ", parts);
+        }
+
+        static string FormatTypeList(Type[] types) {
+            return string.Join(", ", types.Select(GetTypeDisplayName));
+        }
+
+        static string FormatAllowedTypeKinds(int allowedTypeKinds) {
+            if (allowedTypeKinds == 0)
+                return "None";
+
+            if ((allowedTypeKinds & TYPE_KIND_ALL) == TYPE_KIND_ALL && (allowedTypeKinds & ~TYPE_KIND_ALL) == 0)
+                return "All";
+
+            if (allowedTypeKinds == TYPE_KIND_OBJECT)
+                return "Object";
+
+            var names = new List<string>();
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_CLASS, "Class");
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_STRUCT, "Struct");
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_ABSTRACT, "Abstract");
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_INTERFACE, "Interface");
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_STATIC, "Static");
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_ENUM, "Enum");
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_DELEGATE, "Delegate");
+            AddKindName(names, allowedTypeKinds, TYPE_KIND_PRIMITIVE, "Primitive");
+
+            var unknownFlags = allowedTypeKinds & ~TYPE_KIND_ALL;
+            if (unknownFlags != 0)
+                names.Add(unknownFlags.ToString());
+
+            return names.Count == 0
+                ? allowedTypeKinds.ToString()
+                : string.Join("|", names);
+        }
+
+        static void AddKindName(List<string> names, int allowedTypeKinds, int flag, string name) {
+            if ((allowedTypeKinds & flag) != 0)
+                names.Add(name);
+        }
+
         static string GetTypeDisplayName(Type type) {
             return type.FullName ?? type.Name;
+        }
+
+        readonly struct ResolvedConstraintTypeList {
+            public ResolvedConstraintTypeList(Type[] resolvedTypes, bool hasRequestedTypes, bool hasUnresolvedTypes) {
+                ResolvedTypes = resolvedTypes;
+                HasRequestedTypes = hasRequestedTypes;
+                HasUnresolvedTypes = hasUnresolvedTypes;
+            }
+
+            public Type[] ResolvedTypes { get; }
+            public bool HasRequestedTypes { get; }
+            public bool HasUnresolvedTypes { get; }
         }
 
         readonly struct ManifestConstraint {

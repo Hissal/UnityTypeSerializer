@@ -407,7 +407,93 @@ namespace Demo {
             ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
         var diagnostic = Assert.Single(diagnostics.Where(d => d.Id == "STG100"));
 
-        Assert.Contains("field 'Demo.Holder.typeRef' base 'Demo.IService'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("field 'Demo.Holder.typeRef'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("base 'Demo.IService'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("AllowedTypeKinds=Object", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SourceDiagnosticIncludesSerializedTypeOptionsDetails() {
+        var source = @"
+namespace Demo {
+    public interface IService { }
+    public interface IOtherService { }
+    public sealed class ServiceImpl : IService { }
+
+    public sealed class Holder {
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(
+            AllowedTypeKinds = Hissal.UnityTypeSerializer.SerializedTypeKind.Class,
+            InheritsOrImplementsAny = new[] { typeof(IService), typeof(IOtherService) })]
+        private Hissal.UnityTypeSerializer.SerializedType typeRef = new();
+    }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+        var diagnostic = Assert.Single(diagnostics.Where(d => d.Id == "STG100"));
+
+        Assert.Contains("field 'Demo.Holder.typeRef'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("base 'object'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("AllowedTypeKinds=Class", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("InheritsOrImplementsAny=[Demo.IService, Demo.IOtherService]", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExternalManifestSkipsObjectBaseWhenOptionConstraintsAreUnresolved() {
+        var source = @"
+namespace Demo {
+    public sealed class Unrelated { }
+}
+";
+
+        var manifestXml = @"
+<SerializedTypeUsageManifest generatedAtUtc=""2026-04-11T00:00:00.0000000Z"">
+  <Entry declaringType=""Playground.TestTypes"" fieldName=""fld"" baseConstraint=""System.Object"" allowGenericTypeConstruction=""false"" allowOpenGenerics=""false"" allowedTypeKinds=""3"" inheritsAll="""" inheritsAny=""Playground.IInter;Playground.IInter2;Playground.BaseClass"" customTypeFilter="""" />
+</SerializedTypeUsageManifest>
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new InMemoryAdditionalText(
+                "SerializedTypeUsageManifest.xml",
+                manifestXml)));
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100");
+    }
+
+    [Fact]
+    public async Task ExternalManifestUsesResolvedAnyConstraintsForObjectBase() {
+        var source = @"
+namespace Demo {
+    public interface IService { }
+    public sealed class ServiceImpl : IService { }
+    public sealed class Unrelated { }
+}
+";
+
+        var manifestXml = @"
+<SerializedTypeUsageManifest generatedAtUtc=""2026-04-11T00:00:00.0000000Z"">
+  <Entry declaringType=""Demo.Holder"" fieldName=""typeRef"" baseConstraint=""System.Object"" allowGenericTypeConstruction=""false"" allowOpenGenerics=""false"" allowedTypeKinds=""1"" inheritsAll="""" inheritsAny=""Missing.IService;Demo.IService"" customTypeFilter="""" />
+</SerializedTypeUsageManifest>
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new InMemoryAdditionalText(
+                "SerializedTypeUsageManifest.xml",
+                manifestXml)));
+        var diagnostic = Assert.Single(diagnostics.Where(d => d.Id == "STG100"));
+
+        Assert.Contains("Demo.ServiceImpl", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.DoesNotContain("Demo.Unrelated", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("manifest field 'Demo.Holder.typeRef'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("base 'object'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("AllowedTypeKinds=Class", diagnostic.GetMessage(), System.StringComparison.Ordinal);
+        Assert.Contains("InheritsOrImplementsAny=[Demo.IService]", diagnostic.GetMessage(), System.StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,5 +1,9 @@
 # Changelog
 
+## v 0.4.7
+- Improved `STG100` and Odin eligibility messages to include serialized field origins and `SerializedTypeOptions` constraints.
+- Fixed object-based non-generic `SerializedType` manifest entries so unresolved option constraints no longer warn every object type.
+
 ## v 0.4.6
 - Optimized `SerializedType` type resolution performance by caching resolved `System.Type` instances and invalidating the cache when the serialized type changes.
 - Added Odin Validator for Type serialization eligibility, with support for all `SerializedTypeOptions` constraints and detailed error messages, fully guarded with `#if ODIN_VALIDATOR`.
