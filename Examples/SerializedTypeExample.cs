@@ -404,20 +404,20 @@ namespace Hissal.UnityTypeSerializer.Examples {
         where T : ISerializedTypeExample 
     { }
     
-    [SerializedTypeId("130255ba-1449-4f5c-ad9f-1f5915356047")]
+    [SerializedTypeId("732f452a-e705-4590-8a52-dbdd5f33fbce")]
     public sealed class Wrapper<T> : ISerializedTypeExample 
         where T : ISerializedTypeExample 
     { }
-    
-    [SerializedTypeId("732f452a-e705-4590-8a52-dbdd5f33fbce")]
-    public sealed class Holder<T> : ISerializedTypeExample 
-        where T : ISerializedTypeExample 
+
+    [SerializedTypeId("05ccb656-94ed-456e-a6e9-cf6de29e89f5")]
+    public sealed class Holder<T> : ISerializedTypeExample
+            where T : ISerializedTypeExample
     { }
-    
+
     // ============================================================================
     // MULTI-PARAMETER GENERIC TYPES
     // ============================================================================
-    
+
     [SerializedTypeId("94c47571-43db-4bb6-9b87-a1e1b7d3346e")]
     public sealed class Pair<T1, T2> : ISerializedTypeExample 
         where T1 : ISerializedTypeExample 
