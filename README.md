@@ -114,6 +114,7 @@ public sealed class FireDamage : IDamageEffect { }
 - `SerializedTypeGenerators.dll` is labeled `RoslynAnalyzer` via `Assets/_Project/SourceGeneration/SerializedTypeGenerators.dll.meta`
 - Generator emits per-assembly `ISerializedTypeIdRegistrationProvider` implementations for ID -> AQN registration
 - Usage manifest XML is generated at `Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml` to avoid immutable package writes
+- Automatic usage manifest rebuilding can be disabled per user under `Preferences > Unity Type Serializer`; the manifest can still be rebuilt there or from `Tools > SerializedType > Rebuild Usage Manifest`
 - Analyzer/code-fix diagnostics:
   - `STG001`: duplicate `SerializedTypeId` values (error)
   - `STG100`: likely missing `[SerializedTypeId]` (warning)

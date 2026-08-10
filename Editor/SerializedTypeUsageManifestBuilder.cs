@@ -11,11 +11,16 @@ namespace Hissal.UnityTypeSerializer.Editor {
     [InitializeOnLoad]
     internal static class SerializedTypeUsageManifestBuilder {
         static SerializedTypeUsageManifestBuilder() {
-            EditorApplication.delayCall += () => RebuildManifest();
+            if (SerializedTypeEditorPreferences.AutomaticUsageManifestRebuildEnabled)
+                EditorApplication.delayCall += () => RebuildManifest();
         }
 
         [MenuItem("Tools/SerializedType/Rebuild Usage Manifest")]
         static void RebuildManifestMenu() {
+            RebuildManifestAndLogResult();
+        }
+
+        internal static void RebuildManifestAndLogResult() {
             if (RebuildManifest()) {
                 Debug.Log("[SerializedType] Rebuilt SerializedType usage manifest.");
             }
