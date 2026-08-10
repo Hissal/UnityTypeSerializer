@@ -1,6 +1,7 @@
 # Changelog
 
 ## v ...
+- Add subtle Inspector and Odin Validator warnings for obsolete `SerializedType` references, and mark obsolete picker entries at the bottom of type dropdowns.
 - Add a per-user preference for disabling automatic usage manifest rebuilds while retaining manual rebuild actions.
 - Add `ExplicitTypeList`, `ExcludedTypes`, and `InheritsOrImplementsNone` filtering across drawers, validation, usage manifests, and `STG100` analysis.
 - Make `CustomTypeFilter` the sole configurable filter when set while retaining base-type and generic validity requirements.

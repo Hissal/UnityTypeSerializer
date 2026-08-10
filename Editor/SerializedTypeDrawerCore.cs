@@ -38,6 +38,36 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return HasInvalidSerializedType(selectedType, serializedTypeId, serializedAqn) ? "Invalid" : "None";
         }
 
+        internal static bool TryGetObsoleteTypeWarning(Type? selectedType, out string warningMessage) {
+            warningMessage = string.Empty;
+
+            if (selectedType == null)
+                return false;
+
+            var obsoleteAttribute = GetObsoleteAttribute(selectedType);
+            if (obsoleteAttribute == null)
+                return false;
+
+            var typeName = SerializedTypeDrawerUtilities.GetTypeName(selectedType);
+            warningMessage = string.IsNullOrWhiteSpace(obsoleteAttribute.Message)
+                ? $"Selected type '{typeName}' is marked obsolete."
+                : $"Selected type '{typeName}' is marked obsolete: {obsoleteAttribute.Message}";
+            return true;
+        }
+
+        internal static bool IsObsoleteType(Type type) {
+            return GetObsoleteAttribute(type) != null;
+        }
+
+        static ObsoleteAttribute? GetObsoleteAttribute(Type type) {
+            var obsoleteAttribute = type.GetCustomAttribute<ObsoleteAttribute>();
+            if (obsoleteAttribute == null && type.IsGenericType) {
+                obsoleteAttribute = type.GetGenericTypeDefinition().GetCustomAttribute<ObsoleteAttribute>();
+            }
+
+            return obsoleteAttribute;
+        }
+
         internal static SerializedTypeIdSyncFixes GetTypeIdSyncFixes(
             Type? selectedType,
             string? serializedTypeId,
@@ -268,7 +298,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     // Regular non-generic types are always included
                     return true;
                 })
-                .OrderBy(t => SerializedTypeDrawerUtilities.GetTypeName(t))
+                .OrderBy(IsObsoleteType)
+                .ThenBy(t => SerializedTypeDrawerUtilities.GetTypeName(t))
                 .ToList();
         }
 

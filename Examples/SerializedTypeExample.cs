@@ -413,6 +413,9 @@ namespace Hissal.UnityTypeSerializer.Examples {
     public sealed class AdvancedExample : ISerializedTypeExample { }
     [SerializedTypeId("fca50236-aa99-4fe9-98f5-77cd521be124")]
     public sealed class ConcreteExample : ISerializedTypeExample { }
+    [Obsolete]
+    [SerializedTypeId("899dcc2c-056f-4b0b-9808-77174b847d64")]
+    public sealed class ObsoleteExample : ISerializedTypeExample { }
     [SerializedTypeId("910984a1-6886-49ab-b5a0-07e4d6973cbb")]
     public sealed class SimpleType : ISerializedTypeExample { }
     [SerializedTypeId("31a17554-1b55-4f8a-a8c2-73c57303f445")]

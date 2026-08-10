@@ -42,7 +42,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // Build dropdown items
             dropdownItems = new List<GenericSelectorItem<Type>>();
             foreach (var type in availableTypes) {
-                dropdownItems.Add(new GenericSelectorItem<Type>(GetTypeName(type), type));
+                dropdownItems.Add(new GenericSelectorItem<Type>(GetTypeDropdownName(type), type));
             }
         }
         
@@ -51,6 +51,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
 #if !ODIN_VALIDATOR
             DrawTypeIdSyncWarningWithFixes(currentType);
+            DrawObsoleteTypeWarning(currentType);
 #endif
             
             // Only rebuild construction state if the stored type actually changed
@@ -216,7 +217,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 var currentType = Accessor.GetSelectedType();
                 var genericParam = currentType != null ? GetGenericParameterAtPath(currentType, info.Path) : null;
                 var validTypes = BuildValidTypesForGenericParameter(genericParam, info.Path);
-                items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
+                items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeDropdownName(t), t)).ToList();
                 if (allowOpenGenerics) {
                     items.Insert(0, new GenericSelectorItem<Type>("None", null));
                 }
@@ -303,7 +304,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // Build list of valid types for this generic parameter
             var validTypes = BuildValidTypesForGenericParameter(genericParam, info.Path);
             
-            var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
+            var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeDropdownName(t), t)).ToList();
             if (allowOpenGenerics) {
                 items.Insert(0, new GenericSelectorItem<Type>("None", null));
             }
@@ -551,7 +552,8 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     // Check all generic parameter constraints (class, struct, new(), base/interface)
                     return SerializedTypeDrawerCore.CheckGenericParameterConstraints(t, genericParameter).ShowInDropdown;
                 })
-                .OrderBy(t => GetTypeName(t))
+                .OrderBy(SerializedTypeDrawerCore.IsObsoleteType)
+                .ThenBy(t => GetTypeName(t))
                 .ToList();
         }
         

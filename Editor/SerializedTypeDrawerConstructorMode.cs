@@ -29,7 +29,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // Build dropdown items
             dropdownItems = new List<GenericSelectorItem<Type>>();
             foreach (var type in availableTypes) {
-                dropdownItems.Add(new GenericSelectorItem<Type>(GetTypeName(type), type));
+                dropdownItems.Add(new GenericSelectorItem<Type>(GetTypeDropdownName(type), type));
             }
         }
         
@@ -40,6 +40,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
 #if !ODIN_VALIDATOR
             DrawTypeIdSyncWarningWithFixes(currentType);
+            DrawObsoleteTypeWarning(currentType);
 #endif
             
 #if !ODIN_VALIDATOR
@@ -754,10 +755,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     // Check all generic parameter constraints (class, struct, new(), base/interface)
                     return SerializedTypeDrawerCore.CheckGenericParameterConstraints(t, genericParameter).ShowInDropdown;
                 })
-                .OrderBy(t => GetTypeName(t))
+                .OrderBy(SerializedTypeDrawerCore.IsObsoleteType)
+                .ThenBy(t => GetTypeName(t))
                 .ToList();
-            
-            var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeName(t), t)).ToList();
+
+            var items = validTypes.Select(t => new GenericSelectorItem<Type>(GetTypeDropdownName(t), t)).ToList();
             if (allowOpenGenerics) {
                 items.Insert(0, new GenericSelectorItem<Type>("None", null));
             }

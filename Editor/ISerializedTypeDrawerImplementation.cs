@@ -73,6 +73,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return SerializedTypeDrawerUtilities.GetTypeName(type);
         }
 
+        protected static string GetTypeDropdownName(Type type) {
+            var typeName = GetTypeName(type);
+            return SerializedTypeDrawerCore.IsObsoleteType(type) ? $"{typeName} (obsolete)" : typeName;
+        }
+
         /// <summary>
         /// Gets the display name for the current selection, distinguishing empty from unresolved values.
         /// </summary>
@@ -95,6 +100,15 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 Options,
                 Property,
                 out errorMessage);
+        }
+
+        protected static void DrawObsoleteTypeWarning(Type? selectedType) {
+            if (!SerializedTypeDrawerCore.TryGetObsoleteTypeWarning(selectedType, out var warningMessage))
+                return;
+
+            var warningIcon = EditorGUIUtility.IconContent("console.warnicon.sml");
+            var warningContent = new GUIContent(warningMessage, warningIcon.image);
+            EditorGUILayout.LabelField(warningContent, EditorStyles.wordWrappedMiniLabel);
         }
 
         protected void DrawTypeIdSyncWarningWithFixes(Type? selectedType) {

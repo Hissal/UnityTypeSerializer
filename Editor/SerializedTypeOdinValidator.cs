@@ -26,6 +26,10 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 return;
             }
 
+            if (SerializedTypeDrawerCore.TryGetObsoleteTypeWarning(selectedType, out var warningMessage)) {
+                result.AddWarning(warningMessage);
+            }
+
             var mismatches = value?.GetTypeTreeMismatches() ?? System.Array.Empty<SerializedTypeTreeMismatch>();
             for (int i = 0; i < mismatches.Length; i++) {
                 AddMismatchWarningWithFixes(result, mismatches[i], () => ValueEntry.SmartValue);
@@ -86,6 +90,10 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 && !string.IsNullOrEmpty(errorMessage)) {
                 result.AddError(errorMessage);
                 return;
+            }
+
+            if (SerializedTypeDrawerCore.TryGetObsoleteTypeWarning(selectedType, out var warningMessage)) {
+                result.AddWarning(warningMessage);
             }
 
             var mismatches = value?.GetTypeTreeMismatches() ?? System.Array.Empty<SerializedTypeTreeMismatch>();
