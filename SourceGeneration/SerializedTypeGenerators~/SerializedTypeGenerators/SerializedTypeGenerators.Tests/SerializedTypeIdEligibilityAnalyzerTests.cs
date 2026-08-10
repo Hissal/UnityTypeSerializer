@@ -60,7 +60,11 @@ namespace Demo {
     public sealed class ServiceImpl : IService { }
 
     public sealed class Holder {
-        [Hissal.UnityTypeSerializer.SerializedTypeOptions(CustomTypeFilter = ""TypeProvider.GetTypes"")]
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(
+            CustomTypeFilter = ""TypeProvider.GetTypes"",
+            ExplicitTypeList = new[] { typeof(ServiceImpl) },
+            ExcludedTypes = new[] { typeof(ServiceImpl) },
+            InheritsOrImplementsNone = new[] { typeof(IService) })]
         private Hissal.UnityTypeSerializer.SerializedType<IService> typeRef = new();
     }
 }
@@ -71,6 +75,79 @@ namespace Demo {
             ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
 
         Assert.DoesNotContain(diagnostics, d => d.Id == "STG100");
+    }
+
+    [Fact]
+    public async Task ExplicitTypeListIsTheOnlyCandidateSource() {
+        var source = @"
+namespace Demo {
+    public interface IService { }
+    public sealed class IncludedService : IService { }
+    public sealed class OtherService : IService { }
+
+    public sealed class Holder {
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(
+            ExplicitTypeList = new[] { typeof(IncludedService) })]
+        private Hissal.UnityTypeSerializer.SerializedType<IService> typeRef = new();
+    }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Type 'Demo.IncludedService'", System.StringComparison.Ordinal));
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Type 'Demo.OtherService'", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExcludedTypesRemovesOnlyTheConfiguredDirectType() {
+        var source = @"
+namespace Demo {
+    public interface IService { }
+    public sealed class ExcludedService : IService { }
+    public sealed class IncludedService : IService { }
+
+    public sealed class Holder {
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(
+            ExcludedTypes = new[] { typeof(ExcludedService), typeof(IService) })]
+        private Hissal.UnityTypeSerializer.SerializedType<IService> typeRef = new();
+    }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Type 'Demo.ExcludedService'", System.StringComparison.Ordinal));
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Type 'Demo.IncludedService'", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task InheritsOrImplementsNoneExcludesAssignableTypes() {
+        var source = @"
+namespace Demo {
+    public interface IService { }
+    public interface IBlocked { }
+    public sealed class IncludedService : IService { }
+    public sealed class BlockedService : IService, IBlocked { }
+
+    public sealed class Holder {
+        [Hissal.UnityTypeSerializer.SerializedTypeOptions(
+            InheritsOrImplementsNone = new[] { typeof(IBlocked) })]
+        private Hissal.UnityTypeSerializer.SerializedType<IService> typeRef = new();
+    }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+
+        Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Type 'Demo.IncludedService'", System.StringComparison.Ordinal));
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Type 'Demo.BlockedService'", System.StringComparison.Ordinal));
     }
 
     [Fact]
@@ -123,6 +200,36 @@ namespace Demo {
                 manifestXml)));
 
         Assert.Contains(diagnostics, d => d.Id == "STG100" && d.GetMessage().Contains("Demo.ServiceImpl", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExternalManifestAppliesNewTypeFilters() {
+        var source = @"
+namespace Demo {
+    public interface IService { }
+    public interface IBlocked { }
+    public sealed class ExcludedService : IService { }
+    public sealed class IncludedService : IService { }
+    public sealed class BlockedService : IService, IBlocked { }
+    public sealed class OtherService : IService { }
+}
+";
+
+        var manifestXml = @"
+<SerializedTypeUsageManifest generatedAtUtc=""2026-08-10T00:00:00.0000000Z"">
+  <Entry baseConstraint=""Demo.IService"" allowOpenGenerics=""false"" allowedTypeKinds=""3"" explicitTypes=""Demo.ExcludedService;Demo.IncludedService;Demo.BlockedService"" excludedTypes=""Demo.ExcludedService;Demo.IService"" inheritsAll="""" inheritsAny="""" inheritsNone=""Demo.IBlocked"" customTypeFilter="""" />
+</SerializedTypeUsageManifest>
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new InMemoryAdditionalText(
+                "SerializedTypeUsageManifest.xml",
+                manifestXml)));
+
+        var diagnostic = Assert.Single(diagnostics.Where(d => d.Id == "STG100"));
+        Assert.Contains("Type 'Demo.IncludedService'", diagnostic.GetMessage(), System.StringComparison.Ordinal);
     }
 
     [Fact]

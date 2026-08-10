@@ -1,5 +1,10 @@
 # Changelog
 
+## v ...
+- Add `ExplicitTypeList`, `ExcludedTypes`, and `InheritsOrImplementsNone` filtering across drawers, validation, usage manifests, and `STG100` analysis.
+- Make `CustomTypeFilter` the sole configurable filter when set while retaining base-type and generic validity requirements.
+- Add inspector examples with unambiguous types for explicit, exact-type exclusion, and inheritance-based exclusion filters.
+
 ## v 0.4.7
 - Improved `STG100` and Odin eligibility messages to include serialized field origins and `SerializedTypeOptions` constraints.
 - Fixed object-based non-generic `SerializedType` manifest entries so unresolved option constraints no longer warn every object type.

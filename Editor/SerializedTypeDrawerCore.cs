@@ -139,30 +139,46 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 return false;
             }
 
+            if (HasCustomTypeFilter(options)) {
+                var filter = ResolveSerializedTypeFilter(options!.CustomTypeFilter, property);
+                if (filter.HasValue) {
+                    var includedTypes = GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToHashSet();
+                    if (includedTypes != null && includedTypes.Count > 0 && !MatchesTypeOrGenericDefinition(includedTypes, selectedType)) {
+                        errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is not allowed by CustomTypeFilter include rules.";
+                        return false;
+                    }
+
+                    var excludedTypes = GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, property)?.ToHashSet();
+                    if (excludedTypes != null && excludedTypes.Count > 0 && MatchesTypeOrGenericDefinition(excludedTypes, selectedType)) {
+                        errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is excluded by CustomTypeFilter.";
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
             var allowedKinds = options?.AllowedTypeKinds ?? SerializedTypeKind.Object;
             if (!PassesTypeKindFilter(selectedType, allowedKinds)) {
                 errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is not allowed by AllowedTypeKinds ({allowedKinds}).";
                 return false;
             }
 
-            if (!PassesInheritanceConstraints(selectedType, options)) {
-                errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' does not satisfy inheritance/interface constraints configured in SerializedTypeOptions.";
+            var explicitTypes = GetConfiguredTypes(options?.ExplicitTypeList);
+            if (explicitTypes != null && !MatchesTypeOrGenericDefinition(explicitTypes, selectedType)) {
+                errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is not included in ExplicitTypeList.";
                 return false;
             }
 
-            var filter = ResolveSerializedTypeFilter(options?.CustomTypeFilter, property);
-            if (filter.HasValue) {
-                var includedTypes = GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToHashSet();
-                if (includedTypes != null && includedTypes.Count > 0 && !MatchesTypeOrGenericDefinition(includedTypes, selectedType)) {
-                    errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is not allowed by CustomTypeFilter include rules.";
-                    return false;
-                }
+            var excludedOptionTypes = GetConfiguredTypes(options?.ExcludedTypes);
+            if (excludedOptionTypes != null && MatchesTypeOrGenericDefinition(excludedOptionTypes, selectedType)) {
+                errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is included in ExcludedTypes.";
+                return false;
+            }
 
-                var excludedTypes = GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, property)?.ToHashSet();
-                if (excludedTypes != null && excludedTypes.Count > 0 && MatchesTypeOrGenericDefinition(excludedTypes, selectedType)) {
-                    errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' is excluded by CustomTypeFilter.";
-                    return false;
-                }
+            if (!PassesInheritanceConstraints(selectedType, options)) {
+                errorMessage = $"Type '{SerializedTypeDrawerUtilities.GetTypeName(selectedType)}' does not satisfy inheritance/interface constraints configured in SerializedTypeOptions.";
+                return false;
             }
 
             return true;
@@ -211,25 +227,30 @@ namespace Hissal.UnityTypeSerializer.Editor {
             // If either option is true, we need to show generic type definitions in the dropdown
             bool includeGenericTypeDefinitions = allowGenericTypeConstruction || allowOpenGenerics;
             
-            // Resolve custom filter from string-based resolver
-            var filter = ResolveSerializedTypeFilter(options?.CustomTypeFilter, property);
-            var includedTypes = filter.HasValue
-                ? GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToHashSet()
+            bool hasCustomTypeFilter = HasCustomTypeFilter(options);
+            var filter = hasCustomTypeFilter
+                ? ResolveSerializedTypeFilter(options!.CustomTypeFilter, property)
                 : null;
-            
-            // Resolve excluded types from unified filter
-            var excludedTypes = filter.HasValue
-                ? GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, property)?.ToHashSet()
-                : null;
+            var includedTypes = hasCustomTypeFilter
+                ? filter.HasValue
+                    ? GetFilteredTypes(filter.Value.IncludeTypes, filter.Value.IncludeResolver, property)?.ToHashSet()
+                    : null
+                : GetConfiguredTypes(options?.ExplicitTypeList);
+            var excludedTypes = hasCustomTypeFilter
+                ? filter.HasValue
+                    ? GetFilteredTypes(filter.Value.ExcludeTypes, filter.Value.ExcludeResolver, property)?.ToHashSet()
+                    : null
+                : GetConfiguredTypes(options?.ExcludedTypes);
             
             IEnumerable<Type> typesToFilter = (includedTypes != null && includedTypes.Count > 0)
                 ? includedTypes.Where(t => baseConstraint.IsAssignableFrom(t))
                 : SerializedTypeEditorTypeCache.GetTypesDerivedFrom(baseConstraint);
-            typesToFilter = typesToFilter.Where(t => PassesInheritanceConstraints(t, options));
+
+            if (!hasCustomTypeFilter)
+                typesToFilter = typesToFilter.Where(t => PassesInheritanceConstraints(t, options));
             
-            if (excludedTypes != null && excludedTypes.Count > 0) {
-                typesToFilter = typesToFilter.Where(t => !excludedTypes.Contains(t));
-            }
+            if (excludedTypes != null && excludedTypes.Count > 0)
+                typesToFilter = typesToFilter.Where(t => !MatchesTypeOrGenericDefinition(excludedTypes, t));
             
             // Get allowed type kinds from options (default to Object only)
             var allowedKinds = options?.AllowedTypeKinds ?? SerializedTypeKind.Object;
@@ -237,7 +258,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
             return typesToFilter
                 .Where(t => {
-                    if (!allowAllTypeKinds && !PassesTypeKindFilter(t, allowedKinds))
+                    if (!hasCustomTypeFilter && !allowAllTypeKinds && !PassesTypeKindFilter(t, allowedKinds))
                         return false;
 
                     // Check generic type definition (e.g., List<>)
@@ -261,6 +282,18 @@ namespace Hissal.UnityTypeSerializer.Editor {
             }
 
             return false;
+        }
+
+        static HashSet<Type>? GetConfiguredTypes(Type[]? configuredTypes) {
+            if (configuredTypes == null || configuredTypes.Length == 0)
+                return null;
+
+            var types = configuredTypes.Where(type => type != null).ToHashSet();
+            return types.Count > 0 ? types : null;
+        }
+
+        static bool HasCustomTypeFilter(SerializedTypeOptionsAttribute? options) {
+            return !string.IsNullOrWhiteSpace(options?.CustomTypeFilter);
         }
 
         static bool PassesTypeKindFilter(Type type, SerializedTypeKind allowedKinds) {
@@ -503,16 +536,21 @@ namespace Hissal.UnityTypeSerializer.Editor {
             
             var inheritsAll = options.InheritsOrImplementsAll;
             var inheritsAny = options.InheritsOrImplementsAny;
-            bool hasAll = inheritsAll != null && inheritsAll.Length > 0;
-            bool hasAny = inheritsAny != null && inheritsAny.Length > 0;
+            var inheritsNone = options.InheritsOrImplementsNone;
+            bool hasAll = inheritsAll?.Any(constraint => constraint != null) == true;
+            bool hasAny = inheritsAny?.Any(constraint => constraint != null) == true;
+            bool hasNone = inheritsNone?.Any(constraint => constraint != null) == true;
             
-            if (!hasAll && !hasAny)
+            if (!hasAll && !hasAny && !hasNone)
                 return true;
             
-            if (hasAll && !inheritsAll!.All(constraint => constraint.IsAssignableFrom(candidateType)))
+            if (hasAll && inheritsAll!.Any(constraint => constraint != null && !constraint.IsAssignableFrom(candidateType)))
                 return false;
             
-            if (hasAny && !inheritsAny!.Any(constraint => constraint.IsAssignableFrom(candidateType)))
+            if (hasAny && !inheritsAny!.Any(constraint => constraint != null && constraint.IsAssignableFrom(candidateType)))
+                return false;
+
+            if (hasNone && inheritsNone!.Any(constraint => constraint != null && constraint.IsAssignableFrom(candidateType)))
                 return false;
             
             return true;

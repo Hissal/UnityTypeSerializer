@@ -68,6 +68,12 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 if (!TryResolveMetadataType(typeByMetadataName, entry.BaseConstraintMetadataName, out var baseConstraint))
                     continue;
 
+                var explicitTypeList = ResolveConstraintTypes(typeByMetadataName, entry.ExplicitTypeListMetadataNames);
+                if (explicitTypeList.HasRequestedTypes && explicitTypeList.ResolvedTypes.Length == 0)
+                    continue;
+
+                var excludedTypes = ResolveConstraintTypes(typeByMetadataName, entry.ExcludedTypesMetadataNames);
+
                 var inheritsAll = ResolveConstraintTypes(typeByMetadataName, entry.InheritsOrImplementsAllMetadataNames);
                 if (inheritsAll.HasUnresolvedTypes)
                     continue;
@@ -76,9 +82,14 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 if (inheritsAny.HasRequestedTypes && inheritsAny.ResolvedTypes.Length == 0)
                     continue;
 
+                var inheritsNone = ResolveConstraintTypes(typeByMetadataName, entry.InheritsOrImplementsNoneMetadataNames);
+
                 if (baseConstraint == typeof(object) &&
+                    explicitTypeList.ResolvedTypes.Length == 0 &&
+                    !excludedTypes.HasRequestedTypes &&
                     inheritsAll.ResolvedTypes.Length == 0 &&
-                    inheritsAny.ResolvedTypes.Length == 0) {
+                    inheritsAny.ResolvedTypes.Length == 0 &&
+                    !inheritsNone.HasRequestedTypes) {
                     continue;
                 }
 
@@ -87,9 +98,19 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     entry.AllowedTypeKinds,
                     entry.AllowGenericTypeConstruction,
                     entry.AllowOpenGenerics,
+                    explicitTypeList.ResolvedTypes,
+                    excludedTypes.ResolvedTypes,
                     inheritsAll.ResolvedTypes,
                     inheritsAny.ResolvedTypes,
-                    BuildManifestConstraintReason(entry, baseConstraint, inheritsAll.ResolvedTypes, inheritsAny.ResolvedTypes)));
+                    inheritsNone.ResolvedTypes,
+                    BuildManifestConstraintReason(
+                        entry,
+                        baseConstraint,
+                        explicitTypeList.ResolvedTypes,
+                        excludedTypes.ResolvedTypes,
+                        inheritsAll.ResolvedTypes,
+                        inheritsAny.ResolvedTypes,
+                        inheritsNone.ResolvedTypes)));
             }
 
             return constraints;
@@ -147,6 +168,13 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (!IsAssignableTo(candidateType, constraint.BaseConstraint))
                 return false;
 
+            if (constraint.ExplicitTypeList.Length > 0 &&
+                constraint.ExplicitTypeList.All(explicitType => !MatchesDirectType(candidateType, explicitType)))
+                return false;
+
+            if (constraint.ExcludedTypes.Any(excludedType => MatchesDirectType(candidateType, excludedType)))
+                return false;
+
             if (!PassesAllowedKind(candidateType, constraint.AllowedTypeKinds))
                 return false;
 
@@ -158,6 +186,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
             if (constraint.InheritsOrImplementsAny.Length > 0 &&
                 constraint.InheritsOrImplementsAny.All(required => !IsAssignableTo(candidateType, required)))
+                return false;
+
+            if (constraint.InheritsOrImplementsNone.Any(excludedBase => IsAssignableTo(candidateType, excludedBase)))
                 return false;
 
             reason = constraint.Reason;
@@ -186,6 +217,15 @@ namespace Hissal.UnityTypeSerializer.Editor {
             }
 
             return false;
+        }
+
+        static bool MatchesDirectType(Type candidateType, Type configuredType) {
+            if (candidateType == configuredType)
+                return true;
+
+            var candidateDefinition = candidateType.IsGenericType ? candidateType.GetGenericTypeDefinition() : candidateType;
+            var configuredDefinition = configuredType.IsGenericType ? configuredType.GetGenericTypeDefinition() : configuredType;
+            return candidateDefinition == configuredType || candidateType == configuredDefinition || candidateDefinition == configuredDefinition;
         }
 
         static bool IsTypeMatch(Type left, Type right) {
@@ -234,8 +274,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
         static string BuildManifestConstraintReason(
             SerializedTypeUsageEntry entry,
             Type baseConstraint,
+            Type[] explicitTypeList,
+            Type[] excludedTypes,
             Type[] inheritsOrImplementsAll,
-            Type[] inheritsOrImplementsAny) {
+            Type[] inheritsOrImplementsAny,
+            Type[] inheritsOrImplementsNone) {
 
             var sourceDescription = !string.IsNullOrWhiteSpace(entry.DeclaringType) && !string.IsNullOrWhiteSpace(entry.FieldName)
                 ? $"manifest field '{entry.DeclaringType}.{entry.FieldName}'"
@@ -247,11 +290,20 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 $"AllowedTypeKinds={FormatAllowedTypeKinds(entry.AllowedTypeKinds)}",
             };
 
+            if (explicitTypeList.Length > 0)
+                parts.Add($"ExplicitTypeList=[{FormatTypeList(explicitTypeList)}]");
+
+            if (excludedTypes.Length > 0)
+                parts.Add($"ExcludedTypes=[{FormatTypeList(excludedTypes)}]");
+
             if (inheritsOrImplementsAll.Length > 0)
                 parts.Add($"InheritsOrImplementsAll=[{FormatTypeList(inheritsOrImplementsAll)}]");
 
             if (inheritsOrImplementsAny.Length > 0)
                 parts.Add($"InheritsOrImplementsAny=[{FormatTypeList(inheritsOrImplementsAny)}]");
+
+            if (inheritsOrImplementsNone.Length > 0)
+                parts.Add($"InheritsOrImplementsNone=[{FormatTypeList(inheritsOrImplementsNone)}]");
 
             if (entry.AllowGenericTypeConstruction)
                 parts.Add("AllowGenericTypeConstruction=true");
@@ -322,15 +374,21 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 int allowedTypeKinds,
                 bool allowGenericTypeConstruction,
                 bool allowOpenGenerics,
+                Type[] explicitTypeList,
+                Type[] excludedTypes,
                 Type[] inheritsOrImplementsAll,
                 Type[] inheritsOrImplementsAny,
+                Type[] inheritsOrImplementsNone,
                 string reason) {
                 BaseConstraint = baseConstraint;
                 AllowedTypeKinds = allowedTypeKinds;
                 AllowGenericTypeConstruction = allowGenericTypeConstruction;
                 AllowOpenGenerics = allowOpenGenerics;
+                ExplicitTypeList = explicitTypeList;
+                ExcludedTypes = excludedTypes;
                 InheritsOrImplementsAll = inheritsOrImplementsAll;
                 InheritsOrImplementsAny = inheritsOrImplementsAny;
+                InheritsOrImplementsNone = inheritsOrImplementsNone;
                 Reason = reason;
             }
 
@@ -338,8 +396,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
             public int AllowedTypeKinds { get; }
             public bool AllowGenericTypeConstruction { get; }
             public bool AllowOpenGenerics { get; }
+            public Type[] ExplicitTypeList { get; }
+            public Type[] ExcludedTypes { get; }
             public Type[] InheritsOrImplementsAll { get; }
             public Type[] InheritsOrImplementsAny { get; }
+            public Type[] InheritsOrImplementsNone { get; }
             public string Reason { get; }
         }
     }

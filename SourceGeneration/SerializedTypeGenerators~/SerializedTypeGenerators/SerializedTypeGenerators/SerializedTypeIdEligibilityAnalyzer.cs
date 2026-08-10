@@ -264,6 +264,12 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
                 ? parsedAllowedKinds
                 : TYPE_KIND_OBJECT;
 
+            var explicitTypeSymbols = ResolveConstraintTypeList(compilation, (string?)entryElement.Attribute("explicitTypes"));
+            if (explicitTypeSymbols.HasRequestedTypes && explicitTypeSymbols.ResolvedTypes.IsDefaultOrEmpty)
+                continue;
+
+            var excludedTypeSymbols = ResolveConstraintTypeList(compilation, (string?)entryElement.Attribute("excludedTypes"));
+
             var inheritsAllSymbols = ResolveConstraintTypeList(compilation, (string?)entryElement.Attribute("inheritsAll"));
             if (inheritsAllSymbols.HasUnresolvedTypes)
                 continue;
@@ -272,9 +278,14 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             if (inheritsAnySymbols.HasRequestedTypes && inheritsAnySymbols.ResolvedTypes.IsDefaultOrEmpty)
                 continue;
 
+            var inheritsNoneSymbols = ResolveConstraintTypeList(compilation, (string?)entryElement.Attribute("inheritsNone"));
+
             if (IsSystemObject(baseConstraintSymbol) &&
+                explicitTypeSymbols.ResolvedTypes.IsDefaultOrEmpty &&
+                !excludedTypeSymbols.HasRequestedTypes &&
                 inheritsAllSymbols.ResolvedTypes.IsDefaultOrEmpty &&
-                inheritsAnySymbols.ResolvedTypes.IsDefaultOrEmpty) {
+                inheritsAnySymbols.ResolvedTypes.IsDefaultOrEmpty &&
+                !inheritsNoneSymbols.HasRequestedTypes) {
                 continue;
             }
 
@@ -286,15 +297,21 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
                 allowedTypeKinds,
                 allowGenericTypeConstruction,
                 allowOpenGenerics,
+                explicitTypeSymbols.ResolvedTypes,
+                excludedTypeSymbols.ResolvedTypes,
                 inheritsAllSymbols.ResolvedTypes,
                 inheritsAnySymbols.ResolvedTypes,
+                inheritsNoneSymbols.ResolvedTypes,
                 BuildManifestConstraintReason(
                     baseConstraintSymbol,
                     allowedTypeKinds,
                     allowGenericTypeConstruction,
                     allowOpenGenerics,
+                    explicitTypeSymbols.ResolvedTypes,
+                    excludedTypeSymbols.ResolvedTypes,
                     inheritsAllSymbols.ResolvedTypes,
                     inheritsAnySymbols.ResolvedTypes,
+                    inheritsNoneSymbols.ResolvedTypes,
                     declaringType,
                     fieldName)));
         }
@@ -387,8 +404,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
                     options.AllowedTypeKinds,
                     options.AllowGenericTypeConstruction,
                     options.AllowOpenGenerics,
+                    options.ExplicitTypeList,
+                    options.ExcludedTypes,
                     options.InheritsOrImplementsAll,
                     options.InheritsOrImplementsAny,
+                    options.InheritsOrImplementsNone,
                     BuildSourceConstraintReason(baseConstraint, options, fieldSymbol)));
             }
 
@@ -408,8 +428,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             options.AllowedTypeKinds,
             options.AllowGenericTypeConstruction,
             options.AllowOpenGenerics,
+            options.ExplicitTypeList,
+            options.ExcludedTypes,
             options.InheritsOrImplementsAll,
             options.InheritsOrImplementsAny,
+            options.InheritsOrImplementsNone,
             BuildSourceConstraintReason(objectTypeSymbol, options, fieldSymbol)));
     }
 
@@ -417,8 +440,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         var allowedTypeKinds = TYPE_KIND_OBJECT;
         var allowGenericTypeConstruction = false;
         var allowOpenGenerics = false;
+        var explicitTypeListBuilder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
+        var excludedTypesBuilder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
         var inheritsAllBuilder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
         var inheritsAnyBuilder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
+        var inheritsNoneBuilder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
         var hasDynamicCustomFilter = false;
 
         foreach (var attribute in fieldSymbol.GetAttributes()) {
@@ -439,11 +465,20 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
                         if (namedArgument.Value.Value is bool allowConstruction)
                             allowGenericTypeConstruction = allowConstruction;
                         break;
+                    case "ExplicitTypeList":
+                        AddConstraintTypes(namedArgument.Value, explicitTypeListBuilder);
+                        break;
+                    case "ExcludedTypes":
+                        AddConstraintTypes(namedArgument.Value, excludedTypesBuilder);
+                        break;
                     case "InheritsOrImplementsAll":
                         AddConstraintTypes(namedArgument.Value, inheritsAllBuilder);
                         break;
                     case "InheritsOrImplementsAny":
                         AddConstraintTypes(namedArgument.Value, inheritsAnyBuilder);
+                        break;
+                    case "InheritsOrImplementsNone":
+                        AddConstraintTypes(namedArgument.Value, inheritsNoneBuilder);
                         break;
                     case "CustomTypeFilter":
                         if (namedArgument.Value.Value is string customFilter && !string.IsNullOrWhiteSpace(customFilter))
@@ -457,8 +492,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             allowedTypeKinds,
             allowGenericTypeConstruction,
             allowOpenGenerics,
+            explicitTypeListBuilder.ToImmutable(),
+            excludedTypesBuilder.ToImmutable(),
             inheritsAllBuilder.ToImmutable(),
             inheritsAnyBuilder.ToImmutable(),
+            inheritsNoneBuilder.ToImmutable(),
             hasDynamicCustomFilter);
     }
 
@@ -534,6 +572,13 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         if (!IsAssignableTo(candidateType, constraint.BaseConstraint))
             return false;
 
+        if (!constraint.ExplicitTypeList.IsDefaultOrEmpty &&
+            constraint.ExplicitTypeList.All(explicitType => !MatchesDirectType(candidateType, explicitType)))
+            return false;
+
+        if (constraint.ExcludedTypes.Any(excludedType => MatchesDirectType(candidateType, excludedType)))
+            return false;
+
         if (!PassesAllowedKind(candidateType, constraint.AllowedTypeKinds))
             return false;
 
@@ -545,6 +590,9 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
 
         if (!constraint.InheritsOrImplementsAny.IsDefaultOrEmpty &&
             constraint.InheritsOrImplementsAny.All(required => !IsAssignableTo(candidateType, required)))
+            return false;
+
+        if (constraint.InheritsOrImplementsNone.Any(excludedBase => IsAssignableTo(candidateType, excludedBase)))
             return false;
 
         reason = constraint.Reason;
@@ -576,7 +624,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
     }
 
     static bool HasMeaningfulNonGenericConstraints(OptionsData options) {
-        return !options.InheritsOrImplementsAll.IsDefaultOrEmpty || !options.InheritsOrImplementsAny.IsDefaultOrEmpty;
+        return !options.ExplicitTypeList.IsDefaultOrEmpty ||
+               !options.ExcludedTypes.IsDefaultOrEmpty ||
+               !options.InheritsOrImplementsAll.IsDefaultOrEmpty ||
+               !options.InheritsOrImplementsAny.IsDefaultOrEmpty ||
+               !options.InheritsOrImplementsNone.IsDefaultOrEmpty;
     }
 
     static string BuildSourceConstraintReason(INamedTypeSymbol baseConstraint, OptionsData options, IFieldSymbol fieldSymbol) {
@@ -586,8 +638,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             options.AllowedTypeKinds,
             options.AllowGenericTypeConstruction,
             options.AllowOpenGenerics,
+            options.ExplicitTypeList,
+            options.ExcludedTypes,
             options.InheritsOrImplementsAll,
-            options.InheritsOrImplementsAny);
+            options.InheritsOrImplementsAny,
+            options.InheritsOrImplementsNone);
     }
 
     static string BuildManifestConstraintReason(
@@ -595,8 +650,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         int allowedTypeKinds,
         bool allowGenericTypeConstruction,
         bool allowOpenGenerics,
+        ImmutableArray<INamedTypeSymbol> explicitTypeList,
+        ImmutableArray<INamedTypeSymbol> excludedTypes,
         ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAll,
         ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAny,
+        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsNone,
         string declaringType,
         string fieldName) {
 
@@ -610,8 +668,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             allowedTypeKinds,
             allowGenericTypeConstruction,
             allowOpenGenerics,
+            explicitTypeList,
+            excludedTypes,
             inheritsOrImplementsAll,
-            inheritsOrImplementsAny);
+            inheritsOrImplementsAny,
+            inheritsOrImplementsNone);
     }
 
     static string BuildConstraintReason(
@@ -620,8 +681,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         int allowedTypeKinds,
         bool allowGenericTypeConstruction,
         bool allowOpenGenerics,
+        ImmutableArray<INamedTypeSymbol> explicitTypeList,
+        ImmutableArray<INamedTypeSymbol> excludedTypes,
         ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAll,
-        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAny) {
+        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAny,
+        ImmutableArray<INamedTypeSymbol> inheritsOrImplementsNone) {
 
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(sourceDescription))
@@ -630,11 +694,20 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         parts.Add($"base '{baseConstraint.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}'");
         parts.Add($"AllowedTypeKinds={FormatAllowedTypeKinds(allowedTypeKinds)}");
 
+        if (!explicitTypeList.IsDefaultOrEmpty)
+            parts.Add($"ExplicitTypeList=[{FormatSymbolList(explicitTypeList)}]");
+
+        if (!excludedTypes.IsDefaultOrEmpty)
+            parts.Add($"ExcludedTypes=[{FormatSymbolList(excludedTypes)}]");
+
         if (!inheritsOrImplementsAll.IsDefaultOrEmpty)
             parts.Add($"InheritsOrImplementsAll=[{FormatSymbolList(inheritsOrImplementsAll)}]");
 
         if (!inheritsOrImplementsAny.IsDefaultOrEmpty)
             parts.Add($"InheritsOrImplementsAny=[{FormatSymbolList(inheritsOrImplementsAny)}]");
+
+        if (!inheritsOrImplementsNone.IsDefaultOrEmpty)
+            parts.Add($"InheritsOrImplementsNone=[{FormatSymbolList(inheritsOrImplementsNone)}]");
 
         if (allowGenericTypeConstruction)
             parts.Add("AllowGenericTypeConstruction=true");
@@ -739,6 +812,13 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         }
 
         return false;
+    }
+
+    static bool MatchesDirectType(INamedTypeSymbol candidateType, INamedTypeSymbol configuredType) {
+        return SymbolEqualityComparer.Default.Equals(candidateType, configuredType) ||
+               SymbolEqualityComparer.Default.Equals(candidateType.OriginalDefinition, configuredType) ||
+               SymbolEqualityComparer.Default.Equals(candidateType, configuredType.OriginalDefinition) ||
+               SymbolEqualityComparer.Default.Equals(candidateType.OriginalDefinition, configuredType.OriginalDefinition);
     }
 
     static bool IsTypeMatch(INamedTypeSymbol left, ITypeSymbol right) {
@@ -879,23 +959,32 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             int allowedTypeKinds,
             bool allowGenericTypeConstruction,
             bool allowOpenGenerics,
+            ImmutableArray<INamedTypeSymbol> explicitTypeList,
+            ImmutableArray<INamedTypeSymbol> excludedTypes,
             ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAll,
             ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAny,
+            ImmutableArray<INamedTypeSymbol> inheritsOrImplementsNone,
             bool hasDynamicCustomFilter) {
 
             AllowedTypeKinds = allowedTypeKinds;
             AllowGenericTypeConstruction = allowGenericTypeConstruction;
             AllowOpenGenerics = allowOpenGenerics;
+            ExplicitTypeList = explicitTypeList;
+            ExcludedTypes = excludedTypes;
             InheritsOrImplementsAll = inheritsOrImplementsAll;
             InheritsOrImplementsAny = inheritsOrImplementsAny;
+            InheritsOrImplementsNone = inheritsOrImplementsNone;
             HasDynamicCustomFilter = hasDynamicCustomFilter;
         }
 
         public int AllowedTypeKinds { get; }
         public bool AllowGenericTypeConstruction { get; }
         public bool AllowOpenGenerics { get; }
+        public ImmutableArray<INamedTypeSymbol> ExplicitTypeList { get; }
+        public ImmutableArray<INamedTypeSymbol> ExcludedTypes { get; }
         public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsAll { get; }
         public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsAny { get; }
+        public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsNone { get; }
         public bool HasDynamicCustomFilter { get; }
     }
 
@@ -921,16 +1010,22 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             int allowedTypeKinds,
             bool allowGenericTypeConstruction,
             bool allowOpenGenerics,
+            ImmutableArray<INamedTypeSymbol> explicitTypeList,
+            ImmutableArray<INamedTypeSymbol> excludedTypes,
             ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAll,
             ImmutableArray<INamedTypeSymbol> inheritsOrImplementsAny,
+            ImmutableArray<INamedTypeSymbol> inheritsOrImplementsNone,
             string reason) {
 
             BaseConstraint = baseConstraint;
             AllowedTypeKinds = allowedTypeKinds;
             AllowGenericTypeConstruction = allowGenericTypeConstruction;
             AllowOpenGenerics = allowOpenGenerics;
+            ExplicitTypeList = explicitTypeList;
+            ExcludedTypes = excludedTypes;
             InheritsOrImplementsAll = inheritsOrImplementsAll;
             InheritsOrImplementsAny = inheritsOrImplementsAny;
+            InheritsOrImplementsNone = inheritsOrImplementsNone;
             Reason = reason;
         }
 
@@ -938,8 +1033,11 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
         public int AllowedTypeKinds { get; }
         public bool AllowGenericTypeConstruction { get; }
         public bool AllowOpenGenerics { get; }
+        public ImmutableArray<INamedTypeSymbol> ExplicitTypeList { get; }
+        public ImmutableArray<INamedTypeSymbol> ExcludedTypes { get; }
         public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsAll { get; }
         public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsAny { get; }
+        public ImmutableArray<INamedTypeSymbol> InheritsOrImplementsNone { get; }
         public string Reason { get; }
     }
 }

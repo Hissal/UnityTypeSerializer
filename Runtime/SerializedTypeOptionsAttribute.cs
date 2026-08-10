@@ -49,9 +49,23 @@ namespace Hissal.UnityTypeSerializer {
         /// a <see cref="SerializedTypeFilter"/> or <see cref="System.Collections.Generic.IEnumerable{Type}"/>
         /// for controlling which types appear in the dropdown.
         /// Supports <c>"MemberName"</c> (on the declaring/context type) or <c>"TypeName.MemberName"</c> (explicit type).
+        /// When configured, this is the sole configurable type filter; all other filtering properties are ignored.
         /// </summary>
         /// <seealso cref="SerializedTypeFilter"/>
         public string CustomTypeFilter { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Gets or initializes the complete explicit list of types that may be shown.
+        /// When non-empty, type discovery is limited to this list before the other filtering properties are applied.
+        /// Matching is direct and does not include derived or implementing types.
+        /// </summary>
+        public Type[]? ExplicitTypeList { get; init; }
+
+        /// <summary>
+        /// Gets or initializes types to exclude directly.
+        /// Matching is direct and does not exclude derived or implementing types.
+        /// </summary>
+        public Type[]? ExcludedTypes { get; init; }
 
         /// <summary>
         /// Candidate type must satisfy ALL of these types (AND bucket).
@@ -62,6 +76,12 @@ namespace Hissal.UnityTypeSerializer {
         /// Candidate type must satisfy AT LEAST ONE of these types (OR bucket).
         /// </summary>
         public Type[]? InheritsOrImplementsAny { get; init; }
+
+        /// <summary>
+        /// Candidate type must satisfy NONE of these types (NOT bucket).
+        /// Any type that inherits from or implements one of these types is excluded.
+        /// </summary>
+        public Type[]? InheritsOrImplementsNone { get; init; }
 
         /// <summary>
         /// Gets or initializes the name of a parameterless instance method to invoke

@@ -23,8 +23,11 @@ namespace Hissal.UnityTypeSerializer {
         public bool AllowGenericTypeConstruction { get; init; }
         public bool AllowOpenGenerics { get; init; }
         public SerializedTypeKind AllowedTypeKinds { get; init; } = SerializedTypeKind.Object;
+        public Type[] ExplicitTypeList { get; init; }
+        public Type[] ExcludedTypes { get; init; }
         public Type[] InheritsOrImplementsAll { get; init; }
         public Type[] InheritsOrImplementsAny { get; init; }
+        public Type[] InheritsOrImplementsNone { get; init; }
         public string CustomTypeFilter { get; init; } = string.Empty;
     }
 

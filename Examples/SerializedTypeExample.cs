@@ -117,6 +117,27 @@ namespace Hissal.UnityTypeSerializer.Examples {
         static IEnumerable<Type> GetFilteredAnyTypes() {
             return new Type[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) };
         }
+
+        [Title("Explicit and Exclusion Filtering", bold: true)]
+        [InfoBox("ExplicitTypeList is the sole list of selectable types.")]
+        [SerializeField]
+        [SerializedTypeOptions(
+            ExplicitTypeList = new[] { typeof(BasicExample), typeof(AdvancedExample), typeof(ConcreteExample) })]
+        SerializedType<ISerializedTypeExample>? explicitTypeList;
+
+        [InfoBox("ExcludedTypes removes exact type matches only.\n" +
+                 "Excluding ISerializedTypeExample does not exclude its implementations; ExactExclusionExample is excluded separately.")]
+        [SerializeField]
+        [SerializedTypeOptions(
+            AllowedTypeKinds = SerializedTypeKind.All,
+            ExcludedTypes = new[] { typeof(ISerializedTypeExample), typeof(ExactExclusionExample) })]
+        SerializedType<ISerializedTypeExample>? exactTypeExclusions;
+
+        [InfoBox("InheritsOrImplementsNone excludes the configured type and every type that inherits or implements it.\n" +
+                 "InheritanceExclusionExample implements IInheritanceExclusionExample, so both are excluded.")]
+        [SerializeField]
+        [SerializedTypeOptions(InheritsOrImplementsNone = new[] { typeof(IInheritanceExclusionExample) })]
+        SerializedType<ISerializedTypeExample>? inheritedTypeExclusions;
         
         [Title("Type Kind Filtering", bold: true)]
         [InfoBox("Default behavior - only concrete (non-abstract, non-interface) types are shown.")]
@@ -274,6 +295,9 @@ namespace Hissal.UnityTypeSerializer.Examples {
             LogTypeInfo("Damage Effect", damageEffect);
             LogTypeInfo("Repository", repository);
             LogTypeInfo("Strategy", strategy);
+            LogTypeInfo("Explicit Type List", explicitTypeList);
+            LogTypeInfo("Exact Type Exclusions", exactTypeExclusions);
+            LogTypeInfo("Inherited Type Exclusions", inheritedTypeExclusions);
             LogTypeInfoNonGeneric("Any Type", anyType);
             LogTypeInfoNonGeneric("Filtered Any Type", filteredAnyType);
             LogTypeInfoNonGeneric("Any Type With Generics", anyTypeWithGenerics);
@@ -364,6 +388,8 @@ namespace Hissal.UnityTypeSerializer.Examples {
     /// </summary>
     [SerializedTypeId("9aa7e154-b9a4-4fb3-94d2-70264716b425")]
     public interface ISerializedTypeExample { }
+    [SerializedTypeId("90b48a9d-da75-422d-b2fb-6721a4516382")]
+    public interface IInheritanceExclusionExample : ISerializedTypeExample { }
 
 
     // Real-world pattern interfaces
@@ -389,6 +415,10 @@ namespace Hissal.UnityTypeSerializer.Examples {
     public sealed class ConcreteExample : ISerializedTypeExample { }
     [SerializedTypeId("910984a1-6886-49ab-b5a0-07e4d6973cbb")]
     public sealed class SimpleType : ISerializedTypeExample { }
+    [SerializedTypeId("31a17554-1b55-4f8a-a8c2-73c57303f445")]
+    public sealed class ExactExclusionExample : ISerializedTypeExample { }
+    [SerializedTypeId("a013e314-5190-4721-9618-d2437e1293a6")]
+    public sealed class InheritanceExclusionExample : IInheritanceExclusionExample { }
 
     // ============================================================================
     // GENERIC TEST TYPES - Single parameter

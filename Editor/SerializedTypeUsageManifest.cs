@@ -13,10 +13,16 @@ namespace Hissal.UnityTypeSerializer.Editor {
         public bool AllowGenericTypeConstruction;
         public bool AllowOpenGenerics;
         public int AllowedTypeKinds;
+        public string[] ExplicitTypeList = Array.Empty<string>();
+        public string[] ExcludedTypes = Array.Empty<string>();
         public string[] InheritsOrImplementsAll = Array.Empty<string>();
         public string[] InheritsOrImplementsAny = Array.Empty<string>();
+        public string[] InheritsOrImplementsNone = Array.Empty<string>();
+        public string[] ExplicitTypeListMetadataNames = Array.Empty<string>();
+        public string[] ExcludedTypesMetadataNames = Array.Empty<string>();
         public string[] InheritsOrImplementsAllMetadataNames = Array.Empty<string>();
         public string[] InheritsOrImplementsAnyMetadataNames = Array.Empty<string>();
+        public string[] InheritsOrImplementsNoneMetadataNames = Array.Empty<string>();
         public string CustomTypeFilter = string.Empty;
     }
 

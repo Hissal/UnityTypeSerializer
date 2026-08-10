@@ -83,11 +83,23 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (compare != 0)
                 return compare;
 
+            compare = CompareSequence(a.ExplicitTypeListMetadataNames, b.ExplicitTypeListMetadataNames);
+            if (compare != 0)
+                return compare;
+
+            compare = CompareSequence(a.ExcludedTypesMetadataNames, b.ExcludedTypesMetadataNames);
+            if (compare != 0)
+                return compare;
+
             compare = CompareSequence(a.InheritsOrImplementsAllMetadataNames, b.InheritsOrImplementsAllMetadataNames);
             if (compare != 0)
                 return compare;
 
-            return CompareSequence(a.InheritsOrImplementsAnyMetadataNames, b.InheritsOrImplementsAnyMetadataNames);
+            compare = CompareSequence(a.InheritsOrImplementsAnyMetadataNames, b.InheritsOrImplementsAnyMetadataNames);
+            if (compare != 0)
+                return compare;
+
+            return CompareSequence(a.InheritsOrImplementsNoneMetadataNames, b.InheritsOrImplementsNoneMetadataNames);
         }
 
         static int CompareSequence(IReadOnlyList<string> left, IReadOnlyList<string> right) {
@@ -150,6 +162,14 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 AllowGenericTypeConstruction = options?.AllowGenericTypeConstruction ?? false,
                 AllowOpenGenerics = options?.AllowOpenGenerics ?? false,
                 AllowedTypeKinds = (int)(options?.AllowedTypeKinds ?? SerializedTypeKind.Object),
+                ExplicitTypeList = (options?.ExplicitTypeList ?? Array.Empty<Type>())
+                    .Where(t => t != null)
+                    .Select(GetTypeKey)
+                    .ToArray(),
+                ExcludedTypes = (options?.ExcludedTypes ?? Array.Empty<Type>())
+                    .Where(t => t != null)
+                    .Select(GetTypeKey)
+                    .ToArray(),
                 InheritsOrImplementsAll = (options?.InheritsOrImplementsAll ?? Array.Empty<Type>())
                     .Where(t => t != null)
                     .Select(GetTypeKey)
@@ -158,11 +178,27 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     .Where(t => t != null)
                     .Select(GetTypeKey)
                     .ToArray(),
+                InheritsOrImplementsNone = (options?.InheritsOrImplementsNone ?? Array.Empty<Type>())
+                    .Where(t => t != null)
+                    .Select(GetTypeKey)
+                    .ToArray(),
+                ExplicitTypeListMetadataNames = (options?.ExplicitTypeList ?? Array.Empty<Type>())
+                    .Where(t => t != null)
+                    .Select(GetMetadataTypeName)
+                    .ToArray(),
+                ExcludedTypesMetadataNames = (options?.ExcludedTypes ?? Array.Empty<Type>())
+                    .Where(t => t != null)
+                    .Select(GetMetadataTypeName)
+                    .ToArray(),
                 InheritsOrImplementsAllMetadataNames = (options?.InheritsOrImplementsAll ?? Array.Empty<Type>())
                     .Where(t => t != null)
                     .Select(GetMetadataTypeName)
                     .ToArray(),
                 InheritsOrImplementsAnyMetadataNames = (options?.InheritsOrImplementsAny ?? Array.Empty<Type>())
+                    .Where(t => t != null)
+                    .Select(GetMetadataTypeName)
+                    .ToArray(),
+                InheritsOrImplementsNoneMetadataNames = (options?.InheritsOrImplementsNone ?? Array.Empty<Type>())
                     .Where(t => t != null)
                     .Select(GetMetadataTypeName)
                     .ToArray(),
@@ -173,10 +209,19 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
 
         static bool HasMeaningfulNonGenericOptions(SerializedTypeOptionsAttribute? options) {
+            if (options?.ExplicitTypeList?.Any(t => t != null) == true)
+                return true;
+
+            if (options?.ExcludedTypes?.Any(t => t != null) == true)
+                return true;
+
             if (options?.InheritsOrImplementsAll?.Any(t => t != null) == true)
                 return true;
 
             if (options?.InheritsOrImplementsAny?.Any(t => t != null) == true)
+                return true;
+
+            if (options?.InheritsOrImplementsNone?.Any(t => t != null) == true)
                 return true;
 
             return false;
@@ -263,8 +308,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
                         new XAttribute("allowGenericTypeConstruction", entry.AllowGenericTypeConstruction),
                         new XAttribute("allowOpenGenerics", entry.AllowOpenGenerics),
                         new XAttribute("allowedTypeKinds", entry.AllowedTypeKinds),
+                        new XAttribute("explicitTypes", string.Join(";", entry.ExplicitTypeListMetadataNames)),
+                        new XAttribute("excludedTypes", string.Join(";", entry.ExcludedTypesMetadataNames)),
                         new XAttribute("inheritsAll", string.Join(";", entry.InheritsOrImplementsAllMetadataNames)),
                         new XAttribute("inheritsAny", string.Join(";", entry.InheritsOrImplementsAnyMetadataNames)),
+                        new XAttribute("inheritsNone", string.Join(";", entry.InheritsOrImplementsNoneMetadataNames)),
                         new XAttribute("customTypeFilter", entry.CustomTypeFilter)))));
         }
 
@@ -370,8 +418,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
                        && x.AllowOpenGenerics == y.AllowOpenGenerics
                        && x.AllowedTypeKinds == y.AllowedTypeKinds
                        && string.Equals(x.CustomTypeFilter, y.CustomTypeFilter, StringComparison.Ordinal)
+                       && x.ExplicitTypeListMetadataNames.SequenceEqual(y.ExplicitTypeListMetadataNames)
+                       && x.ExcludedTypesMetadataNames.SequenceEqual(y.ExcludedTypesMetadataNames)
                        && x.InheritsOrImplementsAllMetadataNames.SequenceEqual(y.InheritsOrImplementsAllMetadataNames)
-                       && x.InheritsOrImplementsAnyMetadataNames.SequenceEqual(y.InheritsOrImplementsAnyMetadataNames);
+                       && x.InheritsOrImplementsAnyMetadataNames.SequenceEqual(y.InheritsOrImplementsAnyMetadataNames)
+                       && x.InheritsOrImplementsNoneMetadataNames.SequenceEqual(y.InheritsOrImplementsNoneMetadataNames);
             }
 
             public int GetHashCode(SerializedTypeUsageEntry obj) {
@@ -381,8 +432,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     hash = (hash * 397) ^ obj.AllowOpenGenerics.GetHashCode();
                     hash = (hash * 397) ^ obj.AllowedTypeKinds;
                     hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(obj.CustomTypeFilter);
+                    hash = AddSequenceHash(hash, obj.ExplicitTypeListMetadataNames);
+                    hash = AddSequenceHash(hash, obj.ExcludedTypesMetadataNames);
                     hash = AddSequenceHash(hash, obj.InheritsOrImplementsAllMetadataNames);
                     hash = AddSequenceHash(hash, obj.InheritsOrImplementsAnyMetadataNames);
+                    hash = AddSequenceHash(hash, obj.InheritsOrImplementsNoneMetadataNames);
                     return hash;
                 }
             }

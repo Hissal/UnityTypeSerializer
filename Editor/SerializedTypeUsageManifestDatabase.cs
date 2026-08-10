@@ -23,8 +23,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     AllowGenericTypeConstruction = bool.TryParse((string?)element.Attribute("allowGenericTypeConstruction"), out var allowGenericTypeConstruction) && allowGenericTypeConstruction,
                     AllowOpenGenerics = bool.TryParse((string?)element.Attribute("allowOpenGenerics"), out var allowOpenGenerics) && allowOpenGenerics,
                     AllowedTypeKinds = int.TryParse((string?)element.Attribute("allowedTypeKinds"), out var allowedTypeKinds) ? allowedTypeKinds : 0,
+                    ExplicitTypeListMetadataNames = SplitConstraintList((string?)element.Attribute("explicitTypes")),
+                    ExcludedTypesMetadataNames = SplitConstraintList((string?)element.Attribute("excludedTypes")),
                     InheritsOrImplementsAllMetadataNames = SplitConstraintList((string?)element.Attribute("inheritsAll")),
                     InheritsOrImplementsAnyMetadataNames = SplitConstraintList((string?)element.Attribute("inheritsAny")),
+                    InheritsOrImplementsNoneMetadataNames = SplitConstraintList((string?)element.Attribute("inheritsNone")),
                     CustomTypeFilter = (string?)element.Attribute("customTypeFilter") ?? string.Empty,
                 };
                 entries.Add(entry);
