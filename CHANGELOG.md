@@ -1,6 +1,6 @@
 # Changelog
 
-## v ...
+## v 0.5.1
 
 - Pass a persistent `ProjectSettings` usage-manifest snapshot directly to Roslyn analyzers and migrate unsafe `csc.rsp` self-references.
 
