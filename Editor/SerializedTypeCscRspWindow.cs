@@ -49,15 +49,15 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
             EditorGUILayout.LabelField("Usage Manifest Assembly Integration", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Registers each assembly's csc.rsp as an always-present Roslyn additional file. The analyzer reads " +
-                "the generated usage manifest from Library when it exists, while a missing manifest remains a valid " +
-                "empty state. Existing unrelated csc.rsp content is preserved.",
+                "Registers the persistent usage manifest as a Roslyn additional file for each configured assembly. " +
+                "The manifest survives Library deletion and is passed directly to the analyzer. Existing unrelated " +
+                "csc.rsp content is preserved.",
                 MessageType.Info);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Compiler directive", EditorStyles.miniBoldLabel);
             EditorGUILayout.SelectableLabel(
-                SerializedTypeCscRspUpdater.AdditionalFileDirectiveTemplate,
+                SerializedTypeCscRspUpdater.AdditionalFileDirective,
                 EditorStyles.textField,
                 GUILayout.Height(EditorGUIUtility.singleLineHeight));
 

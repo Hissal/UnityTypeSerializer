@@ -231,7 +231,7 @@ namespace Demo {
             source,
             ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
             ImmutableArray.Create<AdditionalText>(new MissingAdditionalText(
-                "Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml")));
+                "ProjectSettings/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml")));
 
         Assert.DoesNotContain(diagnostics, d => d.Id == "STG100");
     }
@@ -268,7 +268,7 @@ namespace Demo {
 }
 ";
 
-        var manifestPath = "Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml";
+        var manifestPath = "ProjectSettings/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml";
         var missingDiagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
             source,
             ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),

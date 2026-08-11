@@ -61,7 +61,7 @@ namespace Hissal.UnityTypeSerializer.Editor.Tests {
         [Test]
         public void MissingResponseFileIsCreatedWithOnlyCanonicalDirective() {
             var responseFilePath = Path.Combine(temporaryDirectory, "csc.rsp");
-            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective(responseFilePath);
+            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective();
 
             var status = SerializedTypeCscRspUpdater.EnsureResponseFileDirective(responseFilePath);
 
@@ -72,9 +72,21 @@ namespace Hissal.UnityTypeSerializer.Editor.Tests {
         }
 
         [Test]
+        public void CanonicalDirectiveReferencesTheUsageManifest() {
+            var directive = SerializedTypeCscRspUpdater.GetAdditionalFileDirective();
+
+            Assert.That(
+                SerializedTypeUsageManifestPaths.AnalyzerManifestXmlRelativePath,
+                Is.EqualTo("ProjectSettings/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml"));
+            Assert.That(
+                directive,
+                Is.EqualTo($"-additionalfile:\"{SerializedTypeUsageManifestPaths.AnalyzerManifestXmlRelativePath}\""));
+        }
+
+        [Test]
         public void EmptyResponseFileIsUpdatedWithoutAddingALeadingBlankLine() {
             var responseFilePath = Path.Combine(temporaryDirectory, "csc.rsp");
-            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective(responseFilePath);
+            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective();
             File.WriteAllBytes(responseFilePath, Array.Empty<byte>());
 
             var status = SerializedTypeCscRspUpdater.EnsureResponseFileDirective(responseFilePath);
@@ -88,7 +100,7 @@ namespace Hissal.UnityTypeSerializer.Editor.Tests {
         [Test]
         public void ExistingUtf8BomContentIsPreservedAndUpdateIsIdempotent() {
             var responseFilePath = Path.Combine(temporaryDirectory, "csc.rsp");
-            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective(responseFilePath);
+            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective();
             File.WriteAllText(
                 responseFilePath,
                 "-langversion:10\r\n-nullable:enable",
@@ -111,7 +123,7 @@ namespace Hissal.UnityTypeSerializer.Editor.Tests {
         [Test]
         public void ExistingLfNewlineStyleIsPreserved() {
             var responseFilePath = Path.Combine(temporaryDirectory, "csc.rsp");
-            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective(responseFilePath);
+            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective();
             File.WriteAllText(responseFilePath, "-langversion:10\n", new UTF8Encoding(false));
 
             SerializedTypeCscRspUpdater.EnsureResponseFileDirective(responseFilePath);
@@ -124,7 +136,7 @@ namespace Hissal.UnityTypeSerializer.Editor.Tests {
         [Test]
         public void ExistingUtf16ContentIsAppendedWithoutChangingItsPrefix() {
             var responseFilePath = Path.Combine(temporaryDirectory, "csc.rsp");
-            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective(responseFilePath);
+            var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective();
             File.WriteAllText(
                 responseFilePath,
                 "-langversion:10\r\n",
@@ -151,7 +163,7 @@ namespace Hissal.UnityTypeSerializer.Editor.Tests {
 
             foreach (var directive in legacyDirectives) {
                 var responseFilePath = Path.Combine(temporaryDirectory, Guid.NewGuid().ToString("N") + ".rsp");
-                var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective(responseFilePath);
+                var expectedDirective = SerializedTypeCscRspUpdater.GetAdditionalFileDirective();
                 File.WriteAllText(
                     responseFilePath,
                     "-langversion:10\n" + directive + "\n",
@@ -164,6 +176,25 @@ namespace Hissal.UnityTypeSerializer.Editor.Tests {
                     File.ReadAllText(responseFilePath),
                     Is.EqualTo("-langversion:10\n" + expectedDirective + "\n"));
             }
+        }
+
+        [Test]
+        public void ResponseFileSelfReferenceIsMigratedToTheUsageManifest() {
+            var responseFilePath = Path.Combine(temporaryDirectory, "csc.rsp");
+            var responseFileRelativePath = Path.GetFullPath(responseFilePath).Replace('\\', '/');
+            File.WriteAllText(
+                responseFilePath,
+                $"-langversion:10\n-additionalfile:\"{responseFileRelativePath}\"\n",
+                new UTF8Encoding(false));
+
+            var status = SerializedTypeCscRspUpdater.EnsureResponseFileDirective(responseFilePath);
+
+            Assert.That(status, Is.EqualTo(SerializedTypeCscRspFileUpdateStatus.Updated));
+            Assert.That(
+                File.ReadAllText(responseFilePath),
+                Is.EqualTo(
+                    "-langversion:10\n" +
+                    $"-additionalfile:\"{SerializedTypeUsageManifestPaths.AnalyzerManifestXmlRelativePath}\"\n"));
         }
 
         [Test]

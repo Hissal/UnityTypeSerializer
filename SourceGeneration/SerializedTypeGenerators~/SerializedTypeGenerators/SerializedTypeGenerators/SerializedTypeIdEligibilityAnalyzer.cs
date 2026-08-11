@@ -17,7 +17,6 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
     const string SERIALIZED_TYPE_ID_SHORT_ATTRIBUTE_NAME = "SerializedTypeId";
     const string SERIALIZED_TYPE_OPTIONS_ATTRIBUTE_METADATA_NAME = "Hissal.UnityTypeSerializer.SerializedTypeOptionsAttribute";
     const string SERIALIZED_TYPE_USAGE_MANIFEST_FILE_NAME = "SerializedTypeUsageManifest.xml";
-    const string MANIFEST_FALLBACK_RELATIVE_PATH = "Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml";
 
     const int TYPE_KIND_CLASS = 1 << 0;
     const int TYPE_KIND_STRUCT = 1 << 1;
@@ -162,14 +161,12 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
 
     static ImmutableArray<FieldConstraint> CollectExternalFieldConstraints(Compilation compilation, AnalyzerOptions options) {
         var builder = ImmutableArray.CreateBuilder<FieldConstraint>();
-        var sawManifestAdditionalFile = false;
 
         foreach (var additionalFile in options.AdditionalFiles) {
             var fileName = System.IO.Path.GetFileName(additionalFile.Path);
             if (!string.Equals(fileName, SERIALIZED_TYPE_USAGE_MANIFEST_FILE_NAME, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            sawManifestAdditionalFile = true;
             var text = additionalFile.GetText();
             if (text is null)
                 continue;
@@ -181,48 +178,8 @@ public sealed class SerializedTypeIdEligibilityAnalyzer : DiagnosticAnalyzer {
             AddExternalConstraintsFromXml(compilation, xmlContent, builder);
         }
 
-        if (builder.Count == 0 && !sawManifestAdditionalFile) {
-            var fallbackManifestXml = TryReadFallbackManifestXml();
-            if (!string.IsNullOrWhiteSpace(fallbackManifestXml)) {
-                AddExternalConstraintsFromXml(compilation, fallbackManifestXml!, builder);
-            }
-        }
-
         return builder.ToImmutable();
     }
-
-#pragma warning disable RS1035 // Intentional opt-in fallback for Unity where AdditionalFiles are not globally wired.
-    static string? TryReadFallbackManifestXml() {
-        var fallbackManifestPath = FindFallbackManifestPath();
-        if (string.IsNullOrEmpty(fallbackManifestPath))
-            return null;
-
-        try {
-            return global::System.IO.File.ReadAllText(fallbackManifestPath);
-        }
-        catch {
-            return null;
-        }
-    }
-
-    static string? FindFallbackManifestPath() {
-        var currentDirectory = global::System.IO.Directory.GetCurrentDirectory();
-        if (string.IsNullOrEmpty(currentDirectory))
-            return null;
-
-        var directoryInfo = new global::System.IO.DirectoryInfo(currentDirectory);
-        while (directoryInfo is not null) {
-            var libraryCandidate = global::System.IO.Path.Combine(directoryInfo.FullName, MANIFEST_FALLBACK_RELATIVE_PATH);
-            if (global::System.IO.File.Exists(libraryCandidate))
-                return libraryCandidate;
-
-            directoryInfo = directoryInfo.Parent;
-        }
-
-
-        return null;
-    }
-#pragma warning restore RS1035
 
     static void AddExternalConstraintsFromXml(Compilation compilation, string xmlContent, ImmutableArray<FieldConstraint>.Builder builder) {
         if (string.IsNullOrWhiteSpace(xmlContent))

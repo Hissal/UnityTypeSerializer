@@ -2,6 +2,7 @@
 
 ## v ...
 
+- Pass a persistent `ProjectSettings` usage-manifest snapshot directly to Roslyn analyzers and migrate unsafe `csc.rsp` self-references.
 
 ## v 0.5.0
 - Preserve private-repository authentication and report failed pushes when release automation prepares the next CHANGELOG section.

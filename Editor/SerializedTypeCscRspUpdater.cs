@@ -12,7 +12,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
         static readonly Encoding StrictUtf8Encoding = new UTF8Encoding(false, true);
 
-        public const string AdditionalFileDirectiveTemplate = "-additionalfile:\"<assembly-folder>/csc.rsp\"";
+        public static string AdditionalFileDirective => GetAdditionalFileDirective();
 
         public static SerializedTypeCscRspUpdateResult ReconcileConfiguredAssemblies() {
             var settings = SerializedTypeCscRspSettings.instance;
@@ -138,8 +138,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
 
         internal static SerializedTypeCscRspFileUpdateStatus EnsureResponseFileDirective(string responseFilePath) {
-            var additionalFilePath = GetAdditionalFilePath(responseFilePath);
-            var additionalFileDirective = GetAdditionalFileDirective(additionalFilePath);
+            var additionalFileDirective = GetAdditionalFileDirective();
 
             if (!File.Exists(responseFilePath)) {
                 File.WriteAllText(
@@ -160,16 +159,17 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 preambleLength,
                 existingBytes.Length - preambleLength);
 
-            var migratedText = MigrateLegacyUsageManifestDirectives(
+            var migratedText = MigrateObsoleteUsageManifestDirectives(
                 existingText,
+                responseFilePath,
                 additionalFileDirective,
-                out var migratedLegacyDirective);
-            if (migratedLegacyDirective) {
+                out var migratedObsoleteDirective);
+            if (migratedObsoleteDirective) {
                 WriteAllText(responseFilePath, migratedText, encoding);
                 return SerializedTypeCscRspFileUpdateStatus.Updated;
             }
 
-            if (ContainsEquivalentDirective(existingText, additionalFilePath))
+            if (ContainsEquivalentDirective(existingText))
                 return SerializedTypeCscRspFileUpdateStatus.Unchanged;
 
             var newline = DetectNewline(existingText);
@@ -185,19 +185,18 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return SerializedTypeCscRspFileUpdateStatus.Updated;
         }
 
-        internal static string GetAdditionalFileDirective(string additionalFilePath) {
-            return $"-additionalfile:\"{NormalizeAssetPath(additionalFilePath)}\"";
+        internal static string GetAdditionalFileDirective() {
+            return $"-additionalfile:\"{SerializedTypeUsageManifestPaths.AnalyzerManifestXmlRelativePath}\"";
         }
 
-        internal static bool ContainsEquivalentDirective(
-            string responseFileContents,
-            string additionalFilePath) {
-
-            additionalFilePath = NormalizeAssetPath(additionalFilePath);
+        internal static bool ContainsEquivalentDirective(string responseFileContents) {
             using var reader = new StringReader(responseFileContents);
             while (reader.ReadLine() is { } line) {
                 if (TryGetAdditionalFilePath(line, out var value) &&
-                    string.Equals(value, additionalFilePath, StringComparison.Ordinal)) {
+                    string.Equals(
+                        value,
+                        SerializedTypeUsageManifestPaths.AnalyzerManifestXmlRelativePath,
+                        StringComparison.Ordinal)) {
                     return true;
                 }
             }
@@ -205,11 +204,11 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return false;
         }
 
-        static string GetAdditionalFilePath(string responseFilePath) {
-            var fullResponseFilePath = Path.GetFullPath(responseFilePath);
+        static string GetProjectRelativePath(string path) {
+            var fullPath = Path.GetFullPath(path);
             var relativePath = Path.GetRelativePath(
                 SerializedTypeUsageManifestPaths.ProjectRootPath,
-                fullResponseFilePath);
+                fullPath);
 
             if (!Path.IsPathRooted(relativePath) &&
                 !string.Equals(relativePath, "..", StringComparison.Ordinal) &&
@@ -217,11 +216,12 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 return NormalizeAssetPath(relativePath);
             }
 
-            return NormalizeAssetPath(fullResponseFilePath);
+            return NormalizeAssetPath(fullPath);
         }
 
-        static string MigrateLegacyUsageManifestDirectives(
+        static string MigrateObsoleteUsageManifestDirectives(
             string responseFileContents,
+            string responseFilePath,
             string replacementDirective,
             out bool hasChanges) {
 
@@ -239,10 +239,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
                 var line = responseFileContents.Substring(lineStart, lineEnd - lineStart);
                 if (TryGetAdditionalFilePath(line, out var value) &&
-                    string.Equals(
-                        value,
-                        SerializedTypeUsageManifestPaths.ManifestXmlRelativePath,
-                        StringComparison.OrdinalIgnoreCase)) {
+                    IsObsoleteUsageManifestDirective(value, responseFilePath)) {
                     result.Append(replacementDirective);
                     hasChanges = true;
                 }
@@ -265,6 +262,28 @@ namespace Hissal.UnityTypeSerializer.Editor {
             }
 
             return hasChanges ? result.ToString() : responseFileContents;
+        }
+
+        static bool IsObsoleteUsageManifestDirective(string additionalFilePath, string responseFilePath) {
+            if (string.Equals(
+                    additionalFilePath,
+                    SerializedTypeUsageManifestPaths.ManifestXmlRelativePath,
+                    StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+
+            var projectRelativeResponseFilePath = GetProjectRelativePath(responseFilePath);
+            if (string.Equals(
+                    additionalFilePath,
+                    projectRelativeResponseFilePath,
+                    StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+
+            return string.Equals(
+                additionalFilePath,
+                NormalizeAssetPath(Path.GetFullPath(responseFilePath)),
+                StringComparison.OrdinalIgnoreCase);
         }
 
         static bool TryGetAdditionalFilePath(string line, out string additionalFilePath) {
@@ -349,7 +368,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
             if (targetAssetPaths.Count == 0)
                 return result;
 
-            if (!EnsureManifestExists(result))
+            if (!EnsureAnalyzerManifestExists(result))
                 return result;
 
             foreach (var targetAssetPath in targetAssetPaths) {
@@ -380,22 +399,27 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return result;
         }
 
-        static bool EnsureManifestExists(SerializedTypeCscRspUpdateResult result) {
-            if (File.Exists(SerializedTypeUsageManifestPaths.ManifestXmlDiskPath))
+        static bool EnsureAnalyzerManifestExists(SerializedTypeCscRspUpdateResult result) {
+            if (File.Exists(SerializedTypeUsageManifestPaths.AnalyzerManifestXmlDiskPath))
                 return true;
 
             try {
                 SerializedTypeUsageManifestBuilder.RebuildManifest();
+                Directory.CreateDirectory(SerializedTypeUsageManifestPaths.AnalyzerInputRootAbsolutePath);
+                File.Copy(
+                    SerializedTypeUsageManifestPaths.ManifestXmlDiskPath,
+                    SerializedTypeUsageManifestPaths.AnalyzerManifestXmlDiskPath,
+                    overwrite: true);
             }
             catch (Exception exception) {
                 result.AddFailure($"Unable to build the usage manifest: {exception.Message}");
                 return false;
             }
 
-            if (File.Exists(SerializedTypeUsageManifestPaths.ManifestXmlDiskPath))
+            if (File.Exists(SerializedTypeUsageManifestPaths.AnalyzerManifestXmlDiskPath))
                 return true;
 
-            result.AddFailure("The usage manifest builder completed without creating the manifest file.");
+            result.AddFailure("The usage manifest builder completed without creating the persistent analyzer manifest.");
             return false;
         }
 

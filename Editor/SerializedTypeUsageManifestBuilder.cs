@@ -322,7 +322,9 @@ namespace Hissal.UnityTypeSerializer.Editor {
                     var existingGeneratedAtUtc = (string?)existingDocument.Root?.Attribute("generatedAtUtc") ?? string.Empty;
                     var unchangedCandidate = BuildManifestDocument(entries, existingGeneratedAtUtc);
                     if (XNode.DeepEquals(existingDocument, unchangedCandidate))
-                        return false;
+                        return SynchronizeAnalyzerManifestIfPresent(
+                            manifestXmlPath,
+                            SerializedTypeUsageManifestPaths.AnalyzerManifestXmlDiskPath);
                 }
                 catch {
                     // Ignore parse/read failures and overwrite below.
@@ -332,6 +334,25 @@ namespace Hissal.UnityTypeSerializer.Editor {
             var generatedAtUtc = DateTime.UtcNow.ToString("O");
             var updatedDocument = BuildManifestDocument(entries, generatedAtUtc);
             updatedDocument.Save(manifestXmlPath);
+            SynchronizeAnalyzerManifestIfPresent(
+                manifestXmlPath,
+                SerializedTypeUsageManifestPaths.AnalyzerManifestXmlDiskPath);
+            return true;
+        }
+
+        internal static bool SynchronizeAnalyzerManifestIfPresent(
+            string sourceManifestPath,
+            string analyzerManifestPath) {
+
+            if (!File.Exists(analyzerManifestPath))
+                return false;
+
+            var sourceBytes = File.ReadAllBytes(sourceManifestPath);
+            var analyzerBytes = File.ReadAllBytes(analyzerManifestPath);
+            if (sourceBytes.SequenceEqual(analyzerBytes))
+                return false;
+
+            File.Copy(sourceManifestPath, analyzerManifestPath, overwrite: true);
             return true;
         }
 

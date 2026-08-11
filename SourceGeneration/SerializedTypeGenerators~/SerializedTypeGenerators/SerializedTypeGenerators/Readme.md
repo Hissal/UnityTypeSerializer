@@ -18,9 +18,9 @@
 
 Cross-assembly checks use the generated Unity manifest:
 
-- `Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml`
+- `ProjectSettings/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml`
 
-The analyzer reads this file (by name) from analyzer additional files and, in Unity fallback scenarios, from disk.
+The analyzer reads this file by name from Roslyn additional files. It does not perform ambient filesystem reads.
 
 ## Build and Unity integration
 
