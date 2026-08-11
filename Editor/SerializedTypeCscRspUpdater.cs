@@ -12,8 +12,7 @@ namespace Hissal.UnityTypeSerializer.Editor {
 
         static readonly Encoding StrictUtf8Encoding = new UTF8Encoding(false, true);
 
-        public static string AdditionalFileDirective =>
-            $"-additionalfile:\"{SerializedTypeUsageManifestPaths.ManifestXmlRelativePath}\"";
+        public const string AdditionalFileDirectiveTemplate = "-additionalfile:\"<assembly-folder>/csc.rsp\"";
 
         public static SerializedTypeCscRspUpdateResult ReconcileConfiguredAssemblies() {
             var settings = SerializedTypeCscRspSettings.instance;
@@ -139,10 +138,13 @@ namespace Hissal.UnityTypeSerializer.Editor {
         }
 
         internal static SerializedTypeCscRspFileUpdateStatus EnsureResponseFileDirective(string responseFilePath) {
+            var additionalFilePath = GetAdditionalFilePath(responseFilePath);
+            var additionalFileDirective = GetAdditionalFileDirective(additionalFilePath);
+
             if (!File.Exists(responseFilePath)) {
                 File.WriteAllText(
                     responseFilePath,
-                    AdditionalFileDirective + Environment.NewLine,
+                    additionalFileDirective + Environment.NewLine,
                     new UTF8Encoding(false));
                 return SerializedTypeCscRspFileUpdateStatus.Created;
             }
@@ -158,13 +160,22 @@ namespace Hissal.UnityTypeSerializer.Editor {
                 preambleLength,
                 existingBytes.Length - preambleLength);
 
-            if (ContainsEquivalentDirective(existingText))
+            var migratedText = MigrateLegacyUsageManifestDirectives(
+                existingText,
+                additionalFileDirective,
+                out var migratedLegacyDirective);
+            if (migratedLegacyDirective) {
+                WriteAllText(responseFilePath, migratedText, encoding);
+                return SerializedTypeCscRspFileUpdateStatus.Updated;
+            }
+
+            if (ContainsEquivalentDirective(existingText, additionalFilePath))
                 return SerializedTypeCscRspFileUpdateStatus.Unchanged;
 
             var newline = DetectNewline(existingText);
             var appendText = existingText.Length == 0 || EndsWithNewline(existingText)
-                ? AdditionalFileDirective + newline
-                : newline + AdditionalFileDirective + newline;
+                ? additionalFileDirective + newline
+                : newline + additionalFileDirective + newline;
             var appendedBytes = encoding.GetBytes(appendText);
 
             using (var stream = new FileStream(responseFilePath, FileMode.Append, FileAccess.Write, FileShare.Read)) {
@@ -174,35 +185,117 @@ namespace Hissal.UnityTypeSerializer.Editor {
             return SerializedTypeCscRspFileUpdateStatus.Updated;
         }
 
-        internal static bool ContainsEquivalentDirective(string responseFileContents) {
+        internal static string GetAdditionalFileDirective(string additionalFilePath) {
+            return $"-additionalfile:\"{NormalizeAssetPath(additionalFilePath)}\"";
+        }
+
+        internal static bool ContainsEquivalentDirective(
+            string responseFileContents,
+            string additionalFilePath) {
+
+            additionalFilePath = NormalizeAssetPath(additionalFilePath);
             using var reader = new StringReader(responseFileContents);
             while (reader.ReadLine() is { } line) {
-                var trimmedLine = line.Trim();
-                var separatorIndex = trimmedLine.IndexOf(':');
-                if (separatorIndex < 0)
-                    continue;
-
-                var option = trimmedLine.Substring(0, separatorIndex).Trim();
-                if (option.Length < 2 || (option[0] != '-' && option[0] != '/'))
-                    continue;
-
-                if (!string.Equals(option.Substring(1), "additionalfile", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var value = trimmedLine.Substring(separatorIndex + 1).Trim();
-                if (value.Length >= 2 && value[0] == '"' && value[value.Length - 1] == '"')
-                    value = value.Substring(1, value.Length - 2).Trim();
-
-                value = value.Replace('\\', '/');
-                if (string.Equals(
-                        value,
-                        SerializedTypeUsageManifestPaths.ManifestXmlRelativePath,
-                        StringComparison.Ordinal)) {
+                if (TryGetAdditionalFilePath(line, out var value) &&
+                    string.Equals(value, additionalFilePath, StringComparison.Ordinal)) {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        static string GetAdditionalFilePath(string responseFilePath) {
+            var fullResponseFilePath = Path.GetFullPath(responseFilePath);
+            var relativePath = Path.GetRelativePath(
+                SerializedTypeUsageManifestPaths.ProjectRootPath,
+                fullResponseFilePath);
+
+            if (!Path.IsPathRooted(relativePath) &&
+                !string.Equals(relativePath, "..", StringComparison.Ordinal) &&
+                !relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)) {
+                return NormalizeAssetPath(relativePath);
+            }
+
+            return NormalizeAssetPath(fullResponseFilePath);
+        }
+
+        static string MigrateLegacyUsageManifestDirectives(
+            string responseFileContents,
+            string replacementDirective,
+            out bool hasChanges) {
+
+            hasChanges = false;
+            var result = new StringBuilder(responseFileContents.Length);
+            var lineStart = 0;
+
+            while (lineStart < responseFileContents.Length) {
+                var lineEnd = lineStart;
+                while (lineEnd < responseFileContents.Length &&
+                       responseFileContents[lineEnd] != '\r' &&
+                       responseFileContents[lineEnd] != '\n') {
+                    lineEnd++;
+                }
+
+                var line = responseFileContents.Substring(lineStart, lineEnd - lineStart);
+                if (TryGetAdditionalFilePath(line, out var value) &&
+                    string.Equals(
+                        value,
+                        SerializedTypeUsageManifestPaths.ManifestXmlRelativePath,
+                        StringComparison.OrdinalIgnoreCase)) {
+                    result.Append(replacementDirective);
+                    hasChanges = true;
+                }
+                else {
+                    result.Append(line);
+                }
+
+                if (lineEnd < responseFileContents.Length) {
+                    result.Append(responseFileContents[lineEnd]);
+                    lineEnd++;
+                    if (lineEnd < responseFileContents.Length &&
+                        responseFileContents[lineEnd - 1] == '\r' &&
+                        responseFileContents[lineEnd] == '\n') {
+                        result.Append(responseFileContents[lineEnd]);
+                        lineEnd++;
+                    }
+                }
+
+                lineStart = lineEnd;
+            }
+
+            return hasChanges ? result.ToString() : responseFileContents;
+        }
+
+        static bool TryGetAdditionalFilePath(string line, out string additionalFilePath) {
+            additionalFilePath = string.Empty;
+            var trimmedLine = line.Trim();
+            var separatorIndex = trimmedLine.IndexOf(':');
+            if (separatorIndex < 0)
+                return false;
+
+            var option = trimmedLine.Substring(0, separatorIndex).Trim();
+            if (option.Length < 2 || (option[0] != '-' && option[0] != '/'))
+                return false;
+
+            if (!string.Equals(option.Substring(1), "additionalfile", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var value = trimmedLine.Substring(separatorIndex + 1).Trim();
+            if (value.Length >= 2 && value[0] == '"' && value[value.Length - 1] == '"')
+                value = value.Substring(1, value.Length - 2).Trim();
+
+            additionalFilePath = NormalizeAssetPath(value);
+            return true;
+        }
+
+        static void WriteAllText(string path, string contents, Encoding encoding) {
+            var preamble = encoding.GetPreamble();
+            var contentBytes = encoding.GetBytes(contents);
+
+            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+            stream.Write(preamble, 0, preamble.Length);
+            stream.Write(contentBytes, 0, contentBytes.Length);
         }
 
         public static void LogResult(string operation, SerializedTypeCscRspUpdateResult result, bool logUnchanged) {

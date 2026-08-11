@@ -114,8 +114,8 @@ public sealed class FireDamage : IDamageEffect { }
 - `SerializedTypeGenerators.dll` is labeled `RoslynAnalyzer` via `Assets/_Project/SourceGeneration/SerializedTypeGenerators.dll.meta`
 - Generator emits per-assembly `ISerializedTypeIdRegistrationProvider` implementations for ID -> AQN registration
 - Usage manifest XML is generated at `Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml` to avoid immutable package writes
+- `Tools > SerializedType > csc.rsp Setup` configures which assembly definition folders enable manifest-backed analyzer input
 - Automatic usage manifest rebuilding runs once per Editor session and after relevant compilation or code-assembly changes; it can be disabled per user under `Preferences > Unity Type Serializer`, while manual rebuilding remains available there and from `Tools > SerializedType > Rebuild Usage Manifest`
-- `Tools > SerializedType > csc.rsp Setup` configures which assembly definition folders receive the manifest as a Roslyn additional file
 - Analyzer/code-fix diagnostics:
   - `STG001`: duplicate `SerializedTypeId` values (error)
   - `STG100`: likely missing `[SerializedTypeId]` (warning)
@@ -123,18 +123,20 @@ public sealed class FireDamage : IDamageEffect { }
 
 #### Usage Manifest Assembly Setup
 
-Open `Tools > SerializedType > csc.rsp Setup` to configure the project assemblies that should receive the usage manifest through this compiler directive:
+Open `Tools > SerializedType > csc.rsp Setup` to configure project assemblies. Each generated or updated response file references itself as an always-present Roslyn input:
 
 ```
--additionalfile:"Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml"
+-additionalfile:"Assets/Path/To/Assembly/csc.rsp"
 ```
+
+The analyzer then reads `Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml` when it exists. This keeps a deleted or fresh `Library` folder equivalent to an empty manifest instead of making startup compilation fail.
 
 - Configuration is shared through `ProjectSettings/UnityTypeSerializerCscRspSettings.asset`.
 - Automatic maintenance is disabled by default. The default root is `Assets`, with no excluded folders.
 - Roots are recursive, while an excluded folder takes precedence for itself and all descendants.
 - Only assembly definitions under `Assets` are considered; package assembly definitions are never modified.
 - Applying enabled automation reconciles immediately, and `Run Now` performs a manual reconciliation regardless of the toggle.
-- Existing `csc.rsp` content is preserved. The tool only appends a missing directive or creates a missing file; disabling automation or changing scope never removes previous additions.
+- Existing unrelated `csc.rsp` content is preserved. The tool appends a missing safe directive, creates a missing file, or migrates the obsolete direct `Library` manifest reference; disabling automation or changing scope never removes previous additions.
 - When enabled, automatic maintenance reacts to `.asmdef` and `csc.rsp` asset changes instead of scanning after ordinary script compilations.
 
 ### `SerializedTypeDrawerMode`

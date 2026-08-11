@@ -84,3 +84,9 @@ internal sealed class InMemoryAdditionalText(string path, string content) : Addi
 
     public override SourceText GetText(CancellationToken cancellationToken = default) => _text;
 }
+
+internal sealed class MissingAdditionalText(string path) : AdditionalText {
+    public override string Path { get; } = path;
+
+    public override SourceText? GetText(CancellationToken cancellationToken = default) => null;
+}

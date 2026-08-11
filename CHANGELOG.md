@@ -1,8 +1,9 @@
 # Changelog
 
 ## v ...
+- Treat a missing usage manifest as empty by keeping `csc.rsp` compiler inputs valid across fresh or deleted `Library` folders.
+- Add project-scoped, asset-driven `csc.rsp` setup for enabling usage-manifest analysis in selected Assets assemblies without removing existing compiler options.
 - Skip automatic usage-manifest reflection scans when a domain reload has no compilation or code-assembly invalidation.
-- Add project-scoped, asset-driven `csc.rsp` setup for supplying the usage manifest to selected Assets assemblies without removing existing compiler options.
 
 ## v 0.4.8
 - Add subtle Inspector and Odin Validator warnings for obsolete `SerializedType` references, and mark obsolete picker entries at the bottom of type dropdowns.

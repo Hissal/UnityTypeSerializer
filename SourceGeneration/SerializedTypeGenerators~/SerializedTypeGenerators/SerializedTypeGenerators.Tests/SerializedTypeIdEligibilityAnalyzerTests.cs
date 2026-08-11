@@ -203,6 +203,95 @@ namespace Demo {
     }
 
     [Fact]
+    public async Task NoAdditionalTextTreatsUsageManifestAsEmpty() {
+        var source = @"
+namespace Demo {
+    public interface IMissingManifestService { }
+    public sealed class MissingManifestService : IMissingManifestService { }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()));
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100");
+    }
+
+    [Fact]
+    public async Task MissingAdditionalTextTreatsUsageManifestAsEmpty() {
+        var source = @"
+namespace Demo {
+    public interface IMissingManifestService { }
+    public sealed class MissingManifestService : IMissingManifestService { }
+}
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new MissingAdditionalText(
+                "Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml")));
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100");
+    }
+
+    [Fact]
+    public async Task EmptyUsageManifestProducesNoExternalConstraints() {
+        var source = @"
+namespace Demo {
+    public interface IEmptyManifestService { }
+    public sealed class EmptyManifestService : IEmptyManifestService { }
+}
+";
+
+        var manifestXml = @"
+<SerializedTypeUsageManifest generatedAtUtc=""2026-08-11T00:00:00.0000000Z"" />
+";
+
+        var diagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new InMemoryAdditionalText(
+                "SerializedTypeUsageManifest.xml",
+                manifestXml)));
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "STG100");
+    }
+
+    [Fact]
+    public async Task UsageManifestIsConsumedWhenMissingAdditionalTextBecomesAvailable() {
+        var source = @"
+namespace Demo {
+    public interface ILateManifestService { }
+    public sealed class LateManifestService : ILateManifestService { }
+}
+";
+
+        var manifestPath = "Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml";
+        var missingDiagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new MissingAdditionalText(manifestPath)));
+
+        var manifestXml = @"
+<SerializedTypeUsageManifest generatedAtUtc=""2026-08-11T00:00:00.0000000Z"">
+  <Entry baseConstraint=""Demo.ILateManifestService"" allowOpenGenerics=""false"" allowedTypeKinds=""3"" inheritsAll="""" inheritsAny="""" customTypeFilter="""" />
+</SerializedTypeUsageManifest>
+";
+        var availableDiagnostics = await AnalyzerTestHelper.GetAnalyzerDiagnosticsAsync(
+            source,
+            ImmutableArray.Create<DiagnosticAnalyzer>(new SerializedTypeIdEligibilityAnalyzer()),
+            ImmutableArray.Create<AdditionalText>(new InMemoryAdditionalText(manifestPath, manifestXml)));
+
+        Assert.DoesNotContain(missingDiagnostics, d => d.Id == "STG100");
+        Assert.Contains(
+            availableDiagnostics,
+            d => d.Id == "STG100" &&
+                 d.GetMessage().Contains("Demo.LateManifestService", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExternalManifestAppliesNewTypeFilters() {
         var source = @"
 namespace Demo {
