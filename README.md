@@ -115,10 +115,27 @@ public sealed class FireDamage : IDamageEffect { }
 - Generator emits per-assembly `ISerializedTypeIdRegistrationProvider` implementations for ID -> AQN registration
 - Usage manifest XML is generated at `Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml` to avoid immutable package writes
 - Automatic usage manifest rebuilding can be disabled per user under `Preferences > Unity Type Serializer`; the manifest can still be rebuilt there or from `Tools > SerializedType > Rebuild Usage Manifest`
+- `Tools > SerializedType > csc.rsp Setup` configures which assembly definition folders receive the manifest as a Roslyn additional file
 - Analyzer/code-fix diagnostics:
   - `STG001`: duplicate `SerializedTypeId` values (error)
   - `STG100`: likely missing `[SerializedTypeId]` (warning)
   - `STG101`: non-GUID `SerializedTypeId` value (info)
+
+#### Usage Manifest Assembly Setup
+
+Open `Tools > SerializedType > csc.rsp Setup` to configure the project assemblies that should receive the usage manifest through this compiler directive:
+
+```
+-additionalfile:"Library/Hissal/UnityTypeSerializer/SerializedTypeUsageManifest.xml"
+```
+
+- Configuration is shared through `ProjectSettings/UnityTypeSerializerCscRspSettings.asset`.
+- Automatic maintenance is disabled by default. The default root is `Assets`, with no excluded folders.
+- Roots are recursive, while an excluded folder takes precedence for itself and all descendants.
+- Only assembly definitions under `Assets` are considered; package assembly definitions are never modified.
+- Applying enabled automation reconciles immediately, and `Run Now` performs a manual reconciliation regardless of the toggle.
+- Existing `csc.rsp` content is preserved. The tool only appends a missing directive or creates a missing file; disabling automation or changing scope never removes previous additions.
+- When enabled, automatic maintenance reacts to `.asmdef` and `csc.rsp` asset changes instead of scanning after ordinary script compilations.
 
 ### `SerializedTypeDrawerMode`
 

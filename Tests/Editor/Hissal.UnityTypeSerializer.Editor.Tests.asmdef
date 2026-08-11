@@ -1,0 +1,21 @@
+{
+    "name": "Hissal.UnityTypeSerializer.Editor.Tests",
+    "rootNamespace": "Hissal.UnityTypeSerializer.Editor.Tests",
+    "references": [
+        "GUID:31e93747094c99342bc1794d0a028b61"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}
