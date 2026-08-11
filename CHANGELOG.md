@@ -1,6 +1,7 @@
 # Changelog
 
 ## v ...
+- Skip automatic usage-manifest reflection scans when a domain reload has no compilation or code-assembly invalidation.
 - Add project-scoped, asset-driven `csc.rsp` setup for supplying the usage manifest to selected Assets assemblies without removing existing compiler options.
 
 ## v 0.4.8

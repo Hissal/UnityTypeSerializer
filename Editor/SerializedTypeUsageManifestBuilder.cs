@@ -5,14 +5,20 @@ using System.Linq;
 using System.Reflection;
 using System.Xml.Linq;
 using UnityEditor;
+using UnityEditor.Compilation;
 using UnityEngine;
 
 namespace Hissal.UnityTypeSerializer.Editor {
     [InitializeOnLoad]
     internal static class SerializedTypeUsageManifestBuilder {
+        const string AutomaticRebuildPendingSessionKey =
+            "Hissal.UnityTypeSerializer.UsageManifestAutomaticRebuildPending";
+
         static SerializedTypeUsageManifestBuilder() {
+            CompilationPipeline.compilationFinished += OnCompilationFinished;
+
             if (SerializedTypeEditorPreferences.AutomaticUsageManifestRebuildEnabled)
-                EditorApplication.delayCall += () => RebuildManifest();
+                EditorApplication.delayCall += RebuildManifestIfNeeded;
         }
 
         [MenuItem("Tools/SerializedType/Rebuild Usage Manifest")]
@@ -32,7 +38,35 @@ namespace Hissal.UnityTypeSerializer.Editor {
         internal static bool RebuildManifest() {
             var usageEntries = CollectUsageEntries();
             SortUsageEntries(usageEntries);
-            return WriteAnalyzerManifestXml(usageEntries);
+            var hasChanges = WriteAnalyzerManifestXml(usageEntries);
+            SessionState.SetBool(AutomaticRebuildPendingSessionKey, false);
+            return hasChanges;
+        }
+
+        internal static void MarkAutomaticRebuildPending() {
+            SessionState.SetBool(AutomaticRebuildPendingSessionKey, true);
+        }
+
+        internal static bool ShouldRebuildAutomatically(bool manifestExists, bool isRebuildPending) {
+            return !manifestExists || isRebuildPending;
+        }
+
+        static void OnCompilationFinished(object _) {
+            MarkAutomaticRebuildPending();
+        }
+
+        static void RebuildManifestIfNeeded() {
+            if (!SerializedTypeEditorPreferences.AutomaticUsageManifestRebuildEnabled)
+                return;
+
+            var isRebuildPending = SessionState.GetBool(AutomaticRebuildPendingSessionKey, true);
+            if (!ShouldRebuildAutomatically(
+                    File.Exists(SerializedTypeUsageManifestPaths.ManifestXmlDiskPath),
+                    isRebuildPending)) {
+                return;
+            }
+
+            RebuildManifest();
         }
 
         static List<SerializedTypeUsageEntry> CollectUsageEntries() {
