@@ -1,6 +1,6 @@
 # Changelog
 
-## v ...
+## v 0.5.0
 - Preserve private-repository authentication and report failed pushes when release automation prepares the next CHANGELOG section.
 - Treat a missing usage manifest as empty by keeping `csc.rsp` compiler inputs valid across fresh or deleted `Library` folders.
 - Add project-scoped, asset-driven `csc.rsp` setup for enabling usage-manifest analysis in selected Assets assemblies without removing existing compiler options.
